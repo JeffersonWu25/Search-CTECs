@@ -3,7 +3,7 @@ This file is used to test the extract.py file.
 """
 import os
 from pathlib import Path
-from extract import extract_text_from_pdf, clean_text, extract_course_info
+from extract import extract_text_from_pdf, clean_text, extract_course_info, extract_quarter_and_year
 
 def test_extract_text_from_pdf():
     """Test PDF text extraction"""
@@ -55,30 +55,30 @@ def test_extract_course_info():
 
     print("extract_course_info tests passed!")
 
-def test_extract_quarter_and_term():
+def test_extract_quarter_and_year():
     """Test quarter and term extraction"""
     text = "Course and Teacher Evaluations CTEC Spring 2024"
-    quarter, year = extract_quarter_and_term(text)
-    assert quarter == "Spring" and year == "2024"
-    
-    # Test with actual PDF
+    dict_one = extract_quarter_and_year(text)
+    assert dict_one['quarter'] == "Spring" and dict_one['year'] == "2024"
+
+    # Test with actual PDF 1
+    hist_text = clean_text(extract_text_from_pdf('data/test.pdf'))
+    dict_two = extract_quarter_and_year(hist_text)
+    assert dict_two['quarter'] == "Fall" and dict_two['year'] == "2024"
+
+    # Test with actual PDF2
     hist_text = clean_text(extract_text_from_pdf('data/test2.pdf'))
-    quarter, year = extract_quarter_and_term(hist_text)
-    assert quarter == "Spring" and year == "2024"
-    
-    # Test invalid
-    quarter, year = extract_quarter_and_term("invalid text")
-    assert quarter is None and year is None
-    
+    dict_two = extract_quarter_and_year(hist_text)
+    assert dict_two['quarter'] == "Spring" and dict_two['year'] == "2024"
+
+    # Test invalid text
+    assert not extract_quarter_and_year("invalid text")
     print("extract_quarter_and_term tests passed!")
 
 if __name__ == "__main__":
-    # Change to the backend directory to make paths work
-    os.chdir(Path(__file__).parent.parent)
-    
     print("Running tests...")
     test_extract_text_from_pdf()
     test_clean_text()
     test_extract_course_info()
-    test_extract_quarter_and_term()
+    test_extract_quarter_and_year()
     print("All tests passed!")

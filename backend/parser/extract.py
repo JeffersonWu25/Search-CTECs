@@ -164,5 +164,53 @@ def extract_quarter_and_year(text: str):
 
     return term_info
 
-print(extract_quarter_and_year(clean_text(extract_text_from_pdf('data/test.pdf'))))
-print(extract_quarter_and_year(clean_text(extract_text_from_pdf('data/test2.pdf'))))
+def extract_ratings(text: str) -> dict:
+    """
+    Extracts ratings from CTEC text.
+    Returns a dictionary of questions 1-5 and their ratings.
+    """
+    ratings = {}
+
+    # Find all occurrences of "Mean" followed by a number
+    matches = re.finditer(r"Mean\s+(\d+\.?\d*)", text)
+
+    for i, match in enumerate(matches, 1):
+        if i > 5:  # We only want the first 5 questions
+            break
+        mean = match.group(1)
+        ratings[f"question_{i}"] = mean
+
+    return ratings
+
+def extract_comments(raw_text: str) -> list:
+    """
+    Extracts comments from CTEC text.
+    Returns a list of comments.
+    """
+    # Find the comments section
+    start = raw_text.find("most important to you.") + len("most important to you.")
+    end = raw_text.find("DEMOGRAPHICS", start)
+    if end == -1:
+        end = len(raw_text)
+
+    # Get the comments section and split into lines
+    comment_text = raw_text[start:end].strip()
+    lines = [line.strip() for line in comment_text.split('\n') if line.strip()]
+
+    # Filter out unwanted sections and combine lines into comments
+    comments = []
+    current = []
+
+    for line in lines:
+        if "Comments" in line or "Student Report for" in line:
+            continue
+        if line[0].isupper() and current:
+            comments.append(' '.join(current))
+            current = [line]
+        else:
+            current.append(line)
+
+    if current:
+        comments.append(' '.join(current))
+
+    return comments
