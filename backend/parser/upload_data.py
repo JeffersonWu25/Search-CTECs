@@ -149,12 +149,11 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
         "offering_id": offering_id
     }
 
-if __name__ == "__main__":
-    # Example usage
-    try:
-        result = upload_ctec("backend/data/test.pdf")
-        print("Successfully uploaded CTEC!")
-        print("Created records:", result)
-    except Exception as e:
-        print(f"Failed to upload CTEC: {e}")
-
+# if __name__ == "__main__":
+#     # Example usage
+#     try:
+#         result = upload_ctec("backend/data/test.pdf")
+#         print("Successfully uploaded CTEC!")
+#         print("Created records:", result)
+#     except Exception as e:
+#         print(f"Failed to upload CTEC: {e}")
