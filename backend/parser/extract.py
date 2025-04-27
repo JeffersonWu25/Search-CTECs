@@ -160,7 +160,7 @@ def extract_quarter_and_year(text: str):
         return {}
 
     term_info['quarter'] = match.group(1)
-    term_info['year'] = match.group(2)
+    term_info['year'] = int(match.group(2))
 
     return term_info
 
@@ -177,7 +177,7 @@ def extract_ratings(text: str) -> dict:
     for i, match in enumerate(matches, 1):
         if i > 5:  # We only want the first 5 questions
             break
-        mean = match.group(1)
+        mean = float(match.group(1))
         ratings[f"question_{i}"] = mean
 
     return ratings
@@ -214,3 +214,37 @@ def extract_comments(raw_text: str) -> list:
         comments.append(' '.join(current))
 
     return comments
+
+def extract_all_info(pdf_path: str) -> dict:
+    """
+    Extracts all information from a CTEC PDF file.
+    Returns a dictionary containing course info, ratings, comments, and term info.
+    """
+    # Extract raw text from PDF
+    raw_text = extract_text_from_pdf(pdf_path)
+    if not raw_text:
+        return {}
+
+    # Clean the text
+    cleaned_text = clean_text(raw_text)
+
+    # Extract all components
+    course_info = extract_course_info(cleaned_text)
+    ratings = extract_ratings(cleaned_text)
+    comments = extract_comments(raw_text)  # Use raw text for comments to preserve formatting
+    term_info = extract_quarter_and_year(cleaned_text)
+
+    # Combine all information into a single dictionary
+    result = {
+        "code": course_info["course_code"],
+        "title": course_info["course_title"],
+        "instructor": course_info["instructor"],
+        "quarter": term_info["quarter"],
+        "year": term_info["year"],
+        "ratings": ratings,
+        "comments": comments,
+        "audience_size": 2,
+        "response_count": 1
+    }
+
+    return result

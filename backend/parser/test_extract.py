@@ -3,7 +3,7 @@ This file is used to test the extract.py file.
 """
 import os
 from pathlib import Path
-from extract import extract_text_from_pdf, clean_text, extract_course_info, extract_quarter_and_year
+from extract import extract_text_from_pdf, clean_text, extract_course_info, extract_quarter_and_year, extract_ratings, extract_comments
 
 def test_extract_text_from_pdf():
     """Test PDF text extraction"""
@@ -75,10 +75,80 @@ def test_extract_quarter_and_year():
     assert not extract_quarter_and_year("invalid text")
     print("extract_quarter_and_term tests passed!")
 
+def test_extract_ratings():
+    """Test ratings extraction"""
+    # Test with sample text containing ratings
+    sample_text = """
+    Statistics Value Response Count 83 Mean 4.25
+    Statistics Value Response Count 83 Mean 4.39
+    Statistics Value Response Count 83 Mean 4.75
+    Statistics Value Response Count 82 Mean 4.51
+    Statistics Value Response Count 83 Mean 4.01
+    """
+    ratings = extract_ratings(sample_text)
+    assert len(ratings) == 5, "Should extract 5 ratings"
+    assert all(f"question_{i}" in ratings for i in range(1, 6)), "Should have questions 1-5"
+    assert all(isinstance(float(ratings[f"question_{i}"]), float) for i in range(1, 6)), "All ratings should be numbers"
+
+    # Test with actual PDF
+    pdf_text = clean_text(extract_text_from_pdf('data/test.pdf'))
+    pdf_ratings = extract_ratings(pdf_text)
+    assert len(pdf_ratings) == 5, "Should extract 5 ratings from PDF"
+    assert all(f"question_{i}" in pdf_ratings for i in range(1, 6)), "Should have questions 1-5 from PDF"
+
+    print("extract_ratings tests passed!")
+
+def test_extract_comments():
+    """Test comments extraction"""
+    # Test with sample text containing comments
+    sample_text = """
+    most important to you.
+    This is the first comment
+    and its continuation
+    This is the second comment
+    and its continuation
+    Final comment
+    DEMOGRAPHICS
+    """
+    comments = extract_comments(sample_text)
+    assert len(comments) == 3, "Should extract 3 comments"
+    assert "This is the first comment and its continuation" in comments
+    assert "This is the second comment and its continuation" in comments
+    assert "Final comment" in comments
+    
+    # Test filtering unwanted sections
+    filter_text = """
+    most important to you.
+    Comments
+    This is the first comment
+    and its continuation
+    Student Report for
+    This is the second comment
+    Student Report for hi memememe you
+    and its continuation
+    This is the third comment
+    Comments
+    DEMOGRAPHICS
+    """
+    filtered = extract_comments(filter_text)
+    assert len(filtered) == 3
+    assert "This is the first comment and its continuation" in filtered
+    assert "This is the second comment and its continuation" in filtered
+    assert "This is the third comment" in filtered
+
+    # Test with actual PDF
+    pdf_comments = extract_comments(extract_text_from_pdf('data/test.pdf'))
+    assert isinstance(pdf_comments, list), "Should return a list"
+    assert all(isinstance(comment, str) for comment in pdf_comments)
+
+    print("extract_comments tests passed!")
+
 if __name__ == "__main__":
     print("Running tests...")
     test_extract_text_from_pdf()
     test_clean_text()
     test_extract_course_info()
     test_extract_quarter_and_year()
+    test_extract_ratings()
+    test_extract_comments()
     print("All tests passed!")
