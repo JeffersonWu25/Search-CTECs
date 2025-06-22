@@ -58,7 +58,7 @@ export function useSearch() {
     []
   )
 
-  // updates everytime queary is changed
+  // updates everytime query is changed
   useEffect(() => {
     debouncedSearch(query)
   }, [query, debouncedSearch])
@@ -78,7 +78,7 @@ export function useSearch() {
     // navigation logic
   }
 
-  // handles showing results when they exist
+  // handles showing results when they exit
   const handleInputFocus = () => {
     if (results.length > 0) {
       setShowDropdown(true)

@@ -41,33 +41,27 @@ export function SearchBar({ onSearch, placeholder = "Search courses or instructo
         
         {showDropdown && (
           <div className="search-dropdown">
-            {results.length > 0 ? (
-              <ul className="search-results">
-                {results.map((result, index) => (
-                  <li
-                    key={`${result.type}-${result.id || index}`}
-                    className="search-result-item"
-                    onClick={() => handleResultSelect(result)}
-                  >
-                    <div className="result-content">
-                      <div className="result-title">
-                        {result.type === 'course' ? result.title : result.name}
-                      </div>
-                      <div className="result-subtitle">
-                        {result.type === 'course' ? result.code : 'Instructor'}
-                      </div>
+            <ul className="search-results">
+              {results.map((result, index) => (
+                <li
+                  key={`${result.type}-${result.id || index}`}
+                  className="search-result-item"
+                  onClick={() => handleResultSelect(result)}
+                >
+                  <div className="result-content">
+                    <div className="result-title">
+                      {result.type === 'course' ? result.title : result.name}
                     </div>
-                    <div className="result-type">
-                      {result.type === 'course' ? '📚' : '👨‍🏫'}
+                    <div className="result-subtitle">
+                      {result.type === 'course' ? result.code : 'Instructor'}
                     </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="no-results">
-                No results found
-              </div>
-            )}
+                  </div>
+                  <div className="result-type">
+                    {result.type === 'course' ? '📚' : '👨‍🏫'}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </form>

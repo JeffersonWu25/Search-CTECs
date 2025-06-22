@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient'
 
 export async function searchCourses(query, limit = 5) {
-  if (!query || query.length < 3) return []
+  if (!query || query.length < 2) return []
 
   const { data, error } = await supabase
     .from ('courses')
@@ -19,7 +19,7 @@ export async function searchCourses(query, limit = 5) {
 }
 
 export async function searchInstructors(query, limit = 5) {
-  if (!query || query.length < 3) return []
+  if (!query || query.length < 2) return []
 
   const { data, error } = await supabase
     .from('instructors')
