@@ -59,17 +59,17 @@ def test_extract_quarter_and_year():
     """Test quarter and term extraction"""
     text = "Course and Teacher Evaluations CTEC Spring 2024"
     dict_one = extract_quarter_and_year(text)
-    assert dict_one['quarter'] == "Spring" and dict_one['year'] == "2024"
+    assert dict_one['quarter'] == "Spring" and dict_one['year'] == 2024
 
     # Test with actual PDF 1
     hist_text = clean_text(extract_text_from_pdf('data/test.pdf'))
     dict_two = extract_quarter_and_year(hist_text)
-    assert dict_two['quarter'] == "Fall" and dict_two['year'] == "2024"
+    assert dict_two['quarter'] == "Fall" and dict_two['year'] == 2024
 
     # Test with actual PDF2
     hist_text = clean_text(extract_text_from_pdf('data/test2.pdf'))
     dict_two = extract_quarter_and_year(hist_text)
-    assert dict_two['quarter'] == "Spring" and dict_two['year'] == "2024"
+    assert dict_two['quarter'] == "Spring" and dict_two['year'] == 2024
 
     # Test invalid text
     assert not extract_quarter_and_year("invalid text")
