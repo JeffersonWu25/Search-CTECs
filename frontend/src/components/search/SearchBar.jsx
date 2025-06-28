@@ -1,5 +1,5 @@
 import { useSearch } from '../../hooks/useSearch'
-import './SearchBar.css'
+import './Search.css'
 
 export function SearchBar({ onSearch, placeholder = "Search courses or instructors..." }) {
   const {

@@ -1,6 +1,6 @@
 /* src/App.css */
 
-/* Layout */
+/* ================= Layout ================= */
 .layout {
   min-height: 100vh;
   background-color: #f8fafc;
@@ -10,7 +10,7 @@
   flex: 1;
 }
 
-/* Header */
+/* ================= Header ================= */
 .header {
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -50,7 +50,7 @@
   color: #111827;
 }
 
-/* Footer */
+/* ================= Footer ================= */
 .footer {
   background-color: #1f2937;
   color: white;
@@ -67,7 +67,7 @@
   margin: 0;
 }
 
-/* Homepage */
+/* ================= Homepage ================= */
 .homepage {
   display: flex;
   justify-content: center;
@@ -117,7 +117,7 @@
   background-color: #2563eb;
 }
 
-/* Results */
+/* ================= Results ================= */
 .results {
   margin-top: 2rem;
 }
@@ -144,4 +144,59 @@
 
 .course-item:hover {
   background-color: #f9fafb;
+}
+
+/* ================= Search Page ================= */
+.search-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 2rem 0;
+}
+
+.search-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.filters-sidebar {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.results-main {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  min-height: 600px;
+}
+
+/* Responsive Design for Search Page */
+@media (max-width: 768px) {
+  .search-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+  
+  .filters-sidebar {
+    position: static;
+    max-height: none;
+  }
+  
+  .results-main {
+    min-height: 400px;
+  }
 }

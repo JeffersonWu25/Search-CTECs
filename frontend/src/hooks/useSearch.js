@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { searchCourses, searchInstructors } from '../services/search'
+import { useNavigate } from 'react-router-dom'
 
 export function useSearch() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
-
+  const navigate = useNavigate()
   // Debounce utility function
   function debounce(func, wait) {
     let timeout
@@ -75,7 +76,7 @@ export function useSearch() {
   const handleResultSelect = (result) => {
     setQuery(result.type === 'course' ? result.title : result.name)
     setShowDropdown(false)
-    // navigation logic
+    navigate(`/search?q=${encodeURIComponent(query)}`)
   }
 
   // handles showing results when they exit
