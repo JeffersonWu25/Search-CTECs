@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useNavigate } from 'react-router-dom'
 import './Search.css'
 
 export function SearchResults({ selectedCourses, selectedInstructors }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-
+  const navigate = useNavigate()
   useEffect(() => {
     const fetchResults = async () => {
       setLoading(true)
@@ -107,6 +108,10 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
     )
   }
 
+  const handleResultClick = (offering) => {
+    navigate(`/offering/${offering.id}`)
+  }
+
   return (
     <div className="search-results-container">
       <div className="results-header">
@@ -117,7 +122,11 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
       </div>
       <div className="results-list">
         {results.map((offering) => (
-          <div key={offering.id} className="result-card">
+          <div key={offering.id}
+               className="result-card"
+               onClick={() => handleResultClick(offering)}
+               style={{ cursor: 'pointer' }}
+          >
             <div className="result-card-header">
               <h4>{offering.courses?.title || 'Unknown Course'}</h4>
               <span className="course-code">
@@ -138,6 +147,7 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
               <span className="offering-date">
                 {offering.created_at ? new Date(offering.created_at).toLocaleDateString() : ''}
               </span>
+              <span className="click-hint">Click to view details →</span>
             </div>
           </div>
         ))}

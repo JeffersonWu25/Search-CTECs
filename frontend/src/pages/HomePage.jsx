@@ -5,7 +5,6 @@ import { SearchBar } from '../components/search/SearchBar'
 export function HomePage() {
   const navigate = useNavigate()
 
-
   return (
     <Layout>
       <div className="homepage">

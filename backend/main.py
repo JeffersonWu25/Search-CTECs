@@ -1,11 +1,11 @@
 # backend/api/main.py
 
 import os
+from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, Query, UploadFile
+from fastapi import FastAPI, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
-from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 load_dotenv()

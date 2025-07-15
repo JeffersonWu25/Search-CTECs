@@ -1,13 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Layout } from '../components/layout/Layout'
 import { CourseFilter } from '../components/search/CourseFilter'
 import { SearchResults } from '../components/search/SearchResults'
 import '../App.css'
 
 export function SearchPage() {
+  const [searchParams] = useSearchParams()
   const [selectedCourses, setSelectedCourses] = useState([])
   const [selectedInstructors, setSelectedInstructors] = useState([])
   const [selectedRequirements, setSelectedRequirements] = useState([])
+
+  // Read URL parameters and pre-populate filters
+  useEffect(() => {
+    const selectedType = searchParams.get('selectedType')
+    const selectedId = searchParams.get('selectedId')
+    const selectedTitle = searchParams.get('selectedTitle')
+    const selectedCode = searchParams.get('selectedCode')
+
+    if (selectedType && selectedId && selectedTitle) {
+      if (selectedType === 'course') {
+        const course = {
+          id: selectedId,
+          title: selectedTitle,
+          code: selectedCode || ''
+        }
+        setSelectedCourses([course])
+      } else if (selectedType === 'instructor') {
+        const instructor = {
+          id: selectedId,
+          name: selectedTitle
+        }
+        setSelectedInstructors([instructor])
+      }
+    }
+  }, [searchParams])
 
   const handleAddCourse = (course) => {
     if (!selectedCourses.find(c => c.id === course.id)) {
