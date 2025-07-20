@@ -1,6 +1,7 @@
 import re
 import os
 from pypdf import PdfReader
+from extract_distribution import extract_distributions_from_pdf
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """
@@ -215,10 +216,122 @@ def extract_comments(raw_text: str) -> list:
 
     return comments
 
+def extract_distributions(pdf_path: str) -> dict:
+    """
+    Extracts distributions from a CTEC PDF file. First 5 questions.
+    Returns a dictionary mapping question numbers to their distributions.
+    """
+    return extract_distributions_from_pdf(pdf_path)
+
+def extract_demographics(text: str) -> dict:
+    """
+    Extracts distributions for time survey and demographics. Questions 6-10
+    """
+    start = text.find("DEMOGRAPHICS")
+    end = len(text)
+    demographic_distributions = {"school_name": {}, "class_year": {},
+                                 "distribution_requirement": {}, "prior_interest": {}}
+
+    demographics_text = text[start:end].strip()
+    departments = [
+        "Education & SP",
+        "Communication",
+        "Graduate School",
+        "KGSM",
+        "McCormick",
+        "Medill",
+        "Music",
+        "Summer",
+        "SPS",
+        "WCAS"
+    ]
+
+    class_year = [
+        "Freshman",
+        "Sophomore",
+        "Junior",
+        "Senior",
+        "Graduate",
+        "Professional",
+        "Other"
+    ]
+
+    distribution_requirement = [
+        "Distribution requirement",
+        "Major/Minor requirement",
+        "Elective requirement",
+        "Non-Degree requirement",
+        "No requirement",
+        "Other requirement"
+    ]
+
+    prior_interest =[
+        "1-Not interested at all",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6-Extremely interested"
+    ]
+
+    for dept in departments:
+        pattern = rf"{re.escape(dept)}\s+(\d+)\s+[\d.]+%"
+        match = re.search(pattern, demographics_text, flags=re.MULTILINE)
+        if match:
+            demographic_distributions["school_name"][dept] = int(match.group(1))
+
+    for year in class_year:
+        pattern = rf"{re.escape(year)}\s+(\d+)\s+[\d.]+%"
+        match = re.search(pattern, demographics_text, flags=re.MULTILINE)
+        if match:
+            demographic_distributions["class_year"][year] = int(match.group(1)) 
+
+    for requirement in distribution_requirement:
+        pattern = rf"{re.escape(requirement)}\s+(\d+)\s+[\d.]+%"
+        match = re.search(pattern, demographics_text, flags=re.MULTILINE)
+        if match:
+            demographic_distributions["distribution_requirement"][requirement] = int(match.group(1))    
+
+    for interest in prior_interest:
+        pattern = rf"{re.escape(interest)}\s+(\d+)\s+[\d.]+%"
+        match = re.search(pattern, demographics_text, flags=re.MULTILINE)
+        if match:
+            demographic_distributions["prior_interest"][interest] = int(match.group(1))
+
+    return demographic_distributions
+
+def extract_time_survey(text: str) -> dict:
+    """
+    Extracts time survey from CTEC text.
+    """
+    start = text.find("TIME-SURVEY QUESTION")
+    end = text.find("Essay Questions")
+    if end == -1:
+        end = len(text)
+    time_survey_distributions = {"time_survey":{}}
+
+    time_survey_text = text[start:end].strip()
+
+    time_ranges = [
+        "3 or fewer",
+        "4 - 7",
+        "8 - 11",
+        "12 - 15",
+        "16 - 19",
+        "20 or more"
+    ]
+
+    for time_range in time_ranges:
+        pattern = rf"{re.escape(time_range)}\s+(\d+)\s+[\d.]+%"
+        match = re.search(pattern, time_survey_text, flags=re.MULTILINE)
+        if match:
+            time_survey_distributions["time_survey"][time_range] = int(match.group(1))
+    return time_survey_distributions
+
 def extract_all_info(pdf_path: str) -> dict:
     """
     Extracts all information from a CTEC PDF file.
-    Returns a dictionary containing course info, ratings, comments, and term info.
+    Returns a dictionary containing course info, ratings, comments, term info, and distributions.
     """
     # Extract raw text from PDF
     raw_text = extract_text_from_pdf(pdf_path)
@@ -233,6 +346,9 @@ def extract_all_info(pdf_path: str) -> dict:
     ratings = extract_ratings(cleaned_text)
     comments = extract_comments(raw_text)  # Use raw text for comments to preserve formatting
     term_info = extract_quarter_and_year(cleaned_text)
+    distributions = extract_distributions(pdf_path)
+    demographics = extract_demographics(cleaned_text)
+    time_survey = extract_time_survey(cleaned_text)
 
     # Combine all information into a single dictionary
     result = {
@@ -243,6 +359,9 @@ def extract_all_info(pdf_path: str) -> dict:
         "year": term_info["year"],
         "ratings": ratings,
         "comments": comments,
+        "distributions": distributions,
+        "demographics": demographics,
+        "time_survey": time_survey,
         "audience_size": 2,
         "response_count": 1
     }

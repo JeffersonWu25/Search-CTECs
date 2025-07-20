@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../supabaseClient'
+import { searchOfferings } from '../../services/offerings'
 import { useNavigate } from 'react-router-dom'
 import './Search.css'
 
@@ -8,40 +8,25 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+
   useEffect(() => {
     const fetchResults = async () => {
+      if (selectedCourses.length === 0 && selectedInstructors.length === 0) {
+        setResults([])
+        return
+      }
+
       setLoading(true)
       setError(null)
+      
       try {
-        // Build base query
-        let query = supabase
-          .from('course_offerings')
-          .select(`
-            *,
-            courses (*),
-            instructors (*)
-          `)
-
-        // Filter by selected courses
-        if (selectedCourses.length > 0) {
-          const courseIds = selectedCourses.map(course => course.id)
-          query = query.in('course_id', courseIds)
+        const filters = {
+          courseIds: selectedCourses.map(course => course.id),
+          instructorIds: selectedInstructors.map(instructor => instructor.id)
         }
 
-        // Filter by selected instructors
-        if (selectedInstructors.length > 0) {
-          const instructorIds = selectedInstructors.map(instructor => instructor.id)
-          query = query.in('instructor_id', instructorIds)
-        }
-
-        // Log the query for debugging
-        console.log('Running Supabase query for course_offerings...')
-        const { data, error } = await query
-        console.log('Supabase query result:', { data, error })
-
-        if (error) throw error
-
-        setResults(data || [])
+        const data = await searchOfferings(filters)
+        setResults(data)
       } catch (err) {
         console.error('Error fetching results:', err)
         setError('Failed to load search results')
@@ -50,11 +35,7 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
       }
     }
 
-    if (selectedCourses.length > 0 || selectedInstructors.length > 0) {
-      fetchResults()
-    } else {
-      setResults([])
-    }
+    fetchResults()
   }, [selectedCourses, selectedInstructors])
 
   const handleRetry = () => {

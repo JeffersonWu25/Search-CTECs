@@ -54,15 +54,15 @@ def get_or_insert_instructor(name: str) -> int:
 
     return insert_response.data[0]["id"]
 
-def get_question_id(question: str) -> int:
+def get_question_id(question_number: int) -> str:
     """
-    Get the ID of a question by text.
+    Get the ID of a question by its number (1-5).
     Raises an error if not found.
     """
-    response = supabase.table("ctec_questions").select("id").eq("text", question).limit(1).execute()
+    response = supabase.table("ctec_questions").select("id").eq("display_order", question_number).limit(1).execute()
 
     if not response.data:
-        raise ValueError(f"Question text not found in database: '{question}'")
+        raise ValueError(f"Question with display_order {question_number} not found in database")
 
     return response.data[0]["id"]
 
@@ -135,9 +135,54 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
                                              extracted_data["year"], extracted_data["audience_size"],
                                              extracted_data["response_count"])
 
-        for question in extracted_data["ratings"]:
-            question_id = get_question_id(question)
-            create_ctec_responses(offering_id, question_id, extracted_data["ratings"][question], {})
+        # Upload main CTEC responses (questions 1-5)
+        distributions = extracted_data.get("distributions", {})
+        print(f"📊 Extracted distributions: {distributions}")
+        
+        for question_key, rating in extracted_data["ratings"].items():
+            # Extract question number from the question key (e.g., "question_1" -> 1)
+            question_num = int(question_key.split("_")[1])
+
+            # Get the question ID from the database
+            question_id = get_question_id(question_num)
+
+            # Get the distribution for this question, or empty dict if not found
+            question_distribution = distributions.get(question_num, {})
+
+            create_ctec_responses(offering_id, question_id, rating, question_distribution)
+
+        # Upload time survey data (question 6)
+        time_survey = extracted_data.get("time_survey", {})
+        if time_survey and "time_survey" in time_survey:
+            print(f"⏰ Time survey data: {time_survey}")
+            time_survey_question_id = get_question_id(6)  # display_order 6
+            # For time survey, we'll use the distribution data directly
+            create_ctec_responses(offering_id, time_survey_question_id, 0.0, time_survey["time_survey"])
+
+        # Upload demographics data
+        demographics = extracted_data.get("demographics", {})
+        if demographics:
+            print(f"📈 Demographics data: {demographics}")
+            
+            # Upload department/school data (question 7)
+            if "school_name" in demographics:
+                department_question_id = get_question_id(7)  # display_order 7
+                create_ctec_responses(offering_id, department_question_id, 0.0, demographics["school_name"])
+            
+            # Upload class year data (question 8)
+            if "class_year" in demographics:
+                class_year_question_id = get_question_id(8)  # display_order 8
+                create_ctec_responses(offering_id, class_year_question_id, 0.0, demographics["class_year"])
+            
+            # Upload distribution requirement data (question 9)
+            if "distribution_requirement" in demographics:
+                requirement_question_id = get_question_id(9)  # display_order 9
+                create_ctec_responses(offering_id, requirement_question_id, 0.0, demographics["distribution_requirement"])
+            
+            # Upload prior interest data (question 10)
+            if "prior_interest" in demographics:
+                interest_question_id = get_question_id(10)  # display_order 10
+                create_ctec_responses(offering_id, interest_question_id, 0.0, demographics["prior_interest"])
 
     except Exception as e:
         print(f"Error uploading CTEC data: {e}")
@@ -149,11 +194,11 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
         "offering_id": offering_id
     }
 
-# if __name__ == "__main__":
-#     # Example usage
-#     try:
-#         result = upload_ctec("backend/data/test.pdf")
-#         print("Successfully uploaded CTEC!")
-#         print("Created records:", result)
-#     except Exception as e:
-#         print(f"Failed to upload CTEC: {e}")
+if __name__ == "__main__":
+    # Example usage
+    try:
+        result = upload_ctec("backend/data/test.pdf")
+        print("Successfully uploaded CTEC!")
+        print("Created records:", result)
+    except Exception as e:
+        print(f"Failed to upload CTEC: {e}")
