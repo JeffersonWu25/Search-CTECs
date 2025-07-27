@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { detailPageInfo } from '../services/detailPage'
 import { Layout } from '../components/layout/Layout'
+import { RatingDistributionChart } from '../components/common/RatingDistributionChart'
 
 export function DetailPage() {
     const { selectedId } = useParams()
@@ -25,7 +26,7 @@ export function DetailPage() {
                 if (!offeringDetails || offeringDetails.length === 0){
                     setError('No offering details found')
                 } else {
-                    setOffering(offeringDetails[0])
+                    setOffering(offeringDetails)
                 }
             } catch (err) {
                 console.log('Error fetching offering details: ', err)
@@ -101,24 +102,32 @@ export function DetailPage() {
               </div>
             </div>
 
-            {offering.ctec_reviews && offering.ctec_reviews.length > 0 && (
+            {offering.ctec_responses && offering.ctec_responses.length > 0 && (
               <div className="reviews-section">
-                <h3>CTEC Reviews ({offering.ctec_reviews.length})</h3>
+                <h3>CTEC Reviews ({offering.ctec_responses.length})</h3>
                 <div className="reviews-list">
-                  {offering.ctec_reviews.map((review) => (
-                    <div key={review.id} className="review-card">
+                  {offering.ctec_responses.map((response) => (
+                    <div key={response.id} className="review-card">
                       <div className="review-header">
                         <div className="review-rating">
-                          <strong>Overall Rating:</strong> {review.overall_rating || 'N/A'}/5
+                          <strong>Question:</strong> {response.ctec_questions?.text || 'N/A'}
+                          <strong>Overall Rating:</strong> {response.mean_score || 'N/A'}/5
+                          
                         </div>
                         <div className="review-date">
-                          {review.created_at ? new Date(review.created_at).toLocaleDateString() : 'N/A'}
+                          {response.created_at ? new Date(response.created_at).toLocaleDateString() : 'N/A'}
                         </div>
                       </div>
-                      {review.comments && (
+                      
+                      {/* Rating Distribution Chart */}
+                      {response.distribution && Object.keys(response.distribution).length > 0 && (
+                        <RatingDistributionChart distribution={response.distribution} />
+                      )}
+                      
+                      {response.comments && (
                         <div className="review-comments">
                           <strong>Comments:</strong>
-                          <p>{review.comments}</p>
+                          <p>{response.comments}</p>
                         </div>
                       )}
                     </div>

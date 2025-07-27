@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient'
 
-export async function detailPageInfo(selectedId, limit = 1) {
+export async function detailPageInfo(selectedId) {
   try {
     
     const { data, error } = await supabase
@@ -9,10 +9,13 @@ export async function detailPageInfo(selectedId, limit = 1) {
         *,
         courses (*),
         instructors (*),
-        ctec_responses (*)
+        ctec_responses (
+          *,
+          ctec_questions (*)
+        )
       `)
       .eq('id', selectedId)
-      .limit(limit)
+      .single()
     
     console.log('📊 Supabase response:', { data, error })
     

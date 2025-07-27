@@ -358,3 +358,42 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+/* ================= Rating Distribution Chart ================= */
+.rating-distribution-chart {
+    font-family: sans-serif;
+    margin-bottom: 2rem;
+  }
+  
+  .chart-header {
+    margin-bottom: 0.5rem;
+  }
+  
+  .total-responses {
+    font-size: 0.9rem;
+    color: #6b7280;
+  }
+  
+  .chart-legend {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+  }
+  
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border-radius: 2px;
+  }
+  
