@@ -1,127 +1,114 @@
+"""
+Extracts rating distributions from CTEC PDFs for the following questions:
+1. Rating of Instruction
+2. Rating of Course
+3. Estimated Learning
+4. Intellectual Challenge
+5. Stimulating Instructor
+"""
+
 import re
 from PIL import Image
 import pytesseract
 from pdf2image import convert_from_path
 
-def parse_text_distribution(text: str) -> dict:
+def get_distribution_for_one_question(text: str) -> dict:
     """
-    Parses OCR'd text for regex patterns and returns a distribution like {1: 6, 2: 7, ...}
+    Given the raw OCR text for a singular question, 
+    extract the distribution, response count, and mean score.
 
     Args:
-        text: The OCR'd text to parse
+        text: the raw OCR text for a singular question
 
     Returns:
-        A dictionary of ratings and counts
+        {distribution: {1: count, 2: count, ..., 6: count}}
     """
-    patterns = [
-        r'(\d+)[^\d]*\((\d+)\)',  # "1-Very Low (9)" or "1 (9)"
-    ]
+    dist_pattern = re.compile(
+        r"(?i)([1-6])(?:\s*[-–—]\s*[A-Za-z][A-Za-z\s–—-]*)?\s*\((\d+)\)" # catches 1-Very Low (9) and 1 (9)
+    )
+    pairs = dist_pattern.findall(text)
 
-    distribution = {}
-
-    for pattern in patterns:
-        matches = re.findall(pattern, text)
-        for match in matches:
-            rating, count = int(match[0]), int(match[1])
-            if 1 <= rating <= 6 and count > 0:
-                distribution[rating] = count
+    # Build distribution (sparse: only bins we actually saw)
+    distribution = {int(k): int(v) for k, v in pairs}
 
     return distribution
 
-def extract_question_distributions(text: str) -> list:
+def get_distributions_for_first_5_survey_questions(text: str) -> list:
     """
-    Extract distributions for individual questions from the text.
+    Extract distributions for the first 5 survey questions from the text.
     Returns a list of dictionaries, one per question.
+
+    Args:
+        text: the raw OCR text for first 5 survey questions
+
+    Returns:
+        {
+            rating_of_instruction: {distribution: {}},
+            rating_of_course: {distribution: {}},
+            estimated_learning: {distribution: {}},
+            intellectual_challange: {distribution: {}},
+            stimulating_instructor: {distribution: {}},
+        }
     """
-    # Split text into sections by question numbers
-    question_sections = re.split(r'\n(\d+\.\s)', text)
 
-    distributions = []
+    survey_questions = {
+        "rating_of_instruction": r"1\.\s*Provide an overall rating of the instruction.*?(?=2\.\s*Provide)",
+        "rating_of_course": r"2\.\s*Provide an overall rating of the course.*?(?=3\.\s*Estimate)",
+        "estimated_learning": r"3\.\s*Estimate how much you learned in the course.*?(?=4\.\s*Rate)",
+        "intellectual_challenge": r"4\.\s*Rate the effectiveness of the course in challenging you intellectually.*?(?=5\.\s*Rate)",
+        "stimulating_instructor": r"5\.\s*Rate the effectiveness of the instructor in stimulating your interest in the subject.*"
+    }
 
-    for i in range(1, len(question_sections), 2):  # Skip even indices (question numbers)
-        if i + 1 < len(question_sections):
-            question_num = question_sections[i].strip().rstrip('.')
-            question_text = question_sections[i + 1]
+    results = {}
+    for question, pattern in survey_questions.items():
+        match = re.search(pattern, text, flags=re.S)
+        if match:
+            block = match.group(0)
+            results[question] = get_distribution_for_one_question(block)
 
-            # Extract distribution for this question
-            dist = parse_text_distribution(question_text)
-            if dist:
-                distributions.append({
-                    'question': int(question_num),
-                    'distribution': dist
-                })
+    return results
 
-    return distributions
-
-def extract_distribution_from_page(page_img: Image.Image) -> dict:
+def get_ocr_text_from_one_page(page_img: Image.Image) -> str:
     """
-    Extracts the response distribution from a full page image.
+    Extracts the OCR text from a full page image.
+
+    Args:
+        page_img: a full page image
+
+    Returns:
+        the OCR text from the page
     """
     # Convert to grayscale for better OCR
     gray_page = page_img.convert("L")
-    ocr_text = pytesseract.image_to_string(gray_page)
-    print("OCR Output:\n", ocr_text)
-
-    # Try to extract individual question distributions
-    question_distributions = extract_question_distributions(ocr_text)
-
-    if question_distributions:
-        return question_distributions
-    else:
-        # Fallback to simple distribution parsing
-        return parse_text_distribution(ocr_text)
+    return pytesseract.image_to_string(gray_page)
 
 def extract_distributions_from_pdf(pdf_path: str) -> dict:
     """
     Extracts distributions from every page of a multi-page CTEC PDF.
 
     Args:
-        pdf_path (str): path to the CTEC PDF file
+        pdf_path: path to the CTEC PDF file
 
     Returns:
-        dict: A dictionary mapping question numbers (1-5) to their distributions
-              Format: {1: {1: count, 2: count, ...}, 2: {1: count, 2: count, ...}, ...}
+        {
+            "rating_of_instruction": {distribution: {}},
+            "rating_of_course": {distribution: {}},
+            "estimated_learning": {distribution: {}},
+            "intellectual_challenge": {distribution: {}},
+            "stimulating_instructor": {distribution: {}},
+        }
     """
     # Convert only pages 2 and 3 to images (0-indexed: pages 1 and 2)
     pages = convert_from_path(pdf_path, dpi=300)
     pages = pages[1:3]
 
-    # Initialize result dictionary for questions 1-5
-    all_distributions = {i: {} for i in range(1, 6)}
+    full_ocr_text = ""
 
     for i, page_img in enumerate(pages):
         print(f"\nProcessing Page {i + 1}")
         try:
-            result = extract_distribution_from_page(page_img)
-            if result is None:
-                continue
-                
-            # Handle both list of dicts and single dict formats
-            if isinstance(result, list):
-                for item in result:
-                    if isinstance(item, dict) and 'question' in item and 'distribution' in item:
-                        question_num = item['question']
-                        if 1 <= question_num <= 5:
-                            all_distributions[question_num] = item['distribution']
-            elif isinstance(result, dict):
-                # If it's a single distribution dict, try to assign it to the appropriate question
-                # This is a fallback for when question parsing fails
-                if i == 0:  # First page typically has questions 1-3
-                    for q in [1, 2, 3]:
-                        if q not in all_distributions or not all_distributions[q]:
-                            all_distributions[q] = result
-                            break
-                elif i == 1:  # Second page typically has questions 4-5
-                    for q in [4, 5]:
-                        if q not in all_distributions or not all_distributions[q]:
-                            all_distributions[q] = result
-                            break
-                            
-            print(f"Page {i + 1} Result: {result}")
+            full_ocr_text += get_ocr_text_from_one_page(page_img)
         except Exception as e:
             print(f"Failed on page {i + 1}: {e}")
-            continue
 
-    return all_distributions
-
-print(extract_distributions_from_pdf("backend/data/test.pdf"))
+    return get_distributions_for_first_5_survey_questions(full_ocr_text)

@@ -1,7 +1,12 @@
+"""
+Extracts all information from CTEC PDFs.
+"""
+
 import re
 import os
 from pypdf import PdfReader
 from extract_distribution import extract_distributions_from_pdf
+from constants import DEPARTMENTS, CLASS_YEAR, DISTRIBUTION_REQUIREMENT, PRIOR_INTEREST, TIME_RANGES
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """
@@ -14,6 +19,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         A single string containing the extracted text from all pages,
         or an empty string if the file doesn't exist or text extraction fails.
     """
+    # check if the file exists
     if not os.path.exists(pdf_path):
         print(f"Error: PDF file not found at {pdf_path}")
         return ""
@@ -50,7 +56,7 @@ def clean_text(text: str) -> str:
     # Split, strip, filter empty lines, and join with spaces
     return ' '.join(line.strip() for line in text.splitlines() if line.strip())
 
-def extract_course_info(text: str):
+def extract_code_title_instructor(text: str):
     """
     Extracts course code, title, and instructor from cleaned
     (single-string, space-separated) PDF text using two regex patterns.
@@ -62,8 +68,12 @@ def extract_course_info(text: str):
         cleaned_pdf_text: The output string from the clean_text function.
 
     Returns:
-        A dictionary containing 'course_title', 'course_code',
-        and 'instructor' if a match is found, otherwise returns None.
+        {
+            "code": str,
+            "title": str,
+            "section": str,
+            "instructor": str
+        }
     """
     # Regex Pattern 1: Matches "TITLE (CODES_STRING) (INSTRUCTOR)" format
     # - No ^/$ anchors to allow matching anywhere within the cleaned text.
@@ -116,10 +126,11 @@ def extract_course_info(text: str):
             # Extract base code: split by comma, take part before colon, remove section number
             codes = [item.split(':')[0].strip() for item in codes_part.split(',') if ':' in item]
             # Remove section numbers (e.g., _1, _2) and take first code
-            base_code = codes[0].rsplit('_', 1)[0] if codes else ""
+            code_and_section = codes[0].rsplit('_', 1)
 
-            course_info['course_title'] = course_title
-            course_info['course_code'] = base_code
+            course_info['title'] = course_title
+            course_info['code'] = code_and_section[0]
+            course_info['section'] = code_and_section[1]
             course_info['instructor'] = instructor
         except IndexError:
             print(f"Error processing groups for Pattern 1 match: {selected_match.groups()}")
@@ -131,10 +142,11 @@ def extract_course_info(text: str):
             course_title = selected_match.group(2).strip()
             instructor = selected_match.group(3).strip()
             # Remove section number if present
-            base_code = course_code.rsplit('_', 1)[0]
+            code_and_section = course_code.rsplit('_', 1)
 
-            course_info['course_title'] = course_title
-            course_info['course_code'] = base_code
+            course_info['title'] = course_title
+            course_info['code'] = code_and_section[0]
+            course_info['section'] = code_and_section[1]
             course_info['instructor'] = instructor
         except IndexError:
             print(f"Error processing groups for Pattern 2 match: {selected_match.groups()}")
@@ -150,7 +162,15 @@ def extract_course_info(text: str):
 def extract_quarter_and_year(text: str):
     """
     Extracts quarter and year from CTEC text.
-    Returns tuple of (quarter, year) or (None, None) if not found.
+
+    Args:
+        text: The cleaned text string from the PDF.
+
+    Returns:
+        {
+            "quarter": str,
+            "year": int
+        }
     """
     term_info = {}
     if not text:
@@ -165,28 +185,20 @@ def extract_quarter_and_year(text: str):
 
     return term_info
 
-def extract_ratings(text: str) -> dict:
-    """
-    Extracts ratings from CTEC text.
-    Returns a dictionary of questions 1-5 and their ratings.
-    """
-    ratings = {}
-
-    # Find all occurrences of "Mean" followed by a number
-    matches = re.finditer(r"Mean\s+(\d+\.?\d*)", text)
-
-    for i, match in enumerate(matches, 1):
-        if i > 5:  # We only want the first 5 questions
-            break
-        mean = float(match.group(1))
-        ratings[f"question_{i}"] = mean
-
-    return ratings
-
 def extract_comments(raw_text: str) -> list:
     """
     Extracts comments from CTEC text.
-    Returns a list of comments.
+
+    Args:
+        raw_text: The raw text string from the PDF.
+
+    Returns:
+        [
+            "comment1",
+            "comment2",
+            "comment3",
+            ...
+        ]
     """
     # Find the comments section
     start = raw_text.find("most important to you.") + len("most important to you.")
@@ -216,93 +228,85 @@ def extract_comments(raw_text: str) -> list:
 
     return comments
 
-def extract_distributions(pdf_path: str) -> dict:
-    """
-    Extracts distributions from a CTEC PDF file. First 5 questions.
-    Returns a dictionary mapping question numbers to their distributions.
-    """
-    return extract_distributions_from_pdf(pdf_path)
-
 def extract_demographics(text: str) -> dict:
     """
-    Extracts distributions for time survey and demographics. Questions 6-10
+    Extracts distributions for demographic questions. Questions 6-10
+
+    Args:
+        text: The cleaned text string from the PDF.
+
+    Returns:
+        {
+            "school_name": {Education & SP: int, Communication: int, Graduate School: int, KGSM: int, McCormick: int, Medill: int, Music: int, Summer: int, SPS: int, WCAS: int}
+            "class_year": {Freshman: int, Sophomore: int, Junior: int, Senior: int, Graduate: int, Professional: int, Other: int}
+            "reason_for_taking_course": {Distribution requirement: int, Major/Minor requirement: int, Elective requirement: int, Non-Degree requirement: int, No requirement: int, Other requirement: int}
+            "prior_interest": {1: int, 2: int, 3: int, 4: int, 5: int, 6: int}
+        }
     """
+    # isolate the text for demographic section
     start = text.find("DEMOGRAPHICS")
     end = len(text)
-    demographic_distributions = {"school_name": {}, "class_year": {},
-                                 "distribution_requirement": {}, "prior_interest": {}}
 
     demographics_text = text[start:end].strip()
-    departments = [
-        "Education & SP",
-        "Communication",
-        "Graduate School",
-        "KGSM",
-        "McCormick",
-        "Medill",
-        "Music",
-        "Summer",
-        "SPS",
-        "WCAS"
-    ]
 
-    class_year = [
-        "Freshman",
-        "Sophomore",
-        "Junior",
-        "Senior",
-        "Graduate",
-        "Professional",
-        "Other"
-    ]
+    demographic_distributions = {
+        "school_name": {},
+        "class_year": {},
+        "reason_for_taking_course": {},
+        "prior_interest": {},
+    }
 
-    distribution_requirement = [
-        "Distribution requirement",
-        "Major/Minor requirement",
-        "Elective requirement",
-        "Non-Degree requirement",
-        "No requirement",
-        "Other requirement"
-    ]
-
-    prior_interest =[
-        "1-Not interested at all",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6-Extremely interested"
-    ]
-
-    for dept in departments:
+    for dept in DEPARTMENTS:
         pattern = rf"{re.escape(dept)}\s+(\d+)\s+[\d.]+%"
         match = re.search(pattern, demographics_text, flags=re.MULTILINE)
         if match:
             demographic_distributions["school_name"][dept] = int(match.group(1))
 
-    for year in class_year:
+    for year in CLASS_YEAR:
         pattern = rf"{re.escape(year)}\s+(\d+)\s+[\d.]+%"
         match = re.search(pattern, demographics_text, flags=re.MULTILINE)
         if match:
-            demographic_distributions["class_year"][year] = int(match.group(1)) 
+            demographic_distributions["class_year"][year] = int(match.group(1))
 
-    for requirement in distribution_requirement:
+    for requirement in DISTRIBUTION_REQUIREMENT:
         pattern = rf"{re.escape(requirement)}\s+(\d+)\s+[\d.]+%"
         match = re.search(pattern, demographics_text, flags=re.MULTILINE)
         if match:
-            demographic_distributions["distribution_requirement"][requirement] = int(match.group(1))    
+            demographic_distributions["reason_for_taking_course"][requirement] = int(match.group(1))
 
-    for interest in prior_interest:
+    for interest in PRIOR_INTEREST:
         pattern = rf"{re.escape(interest)}\s+(\d+)\s+[\d.]+%"
         match = re.search(pattern, demographics_text, flags=re.MULTILINE)
         if match:
-            demographic_distributions["prior_interest"][interest] = int(match.group(1))
+            label = interest
+            if interest == "1-Not interested at all":
+                label = "1"
+            if interest == "6-Extremely interested":
+                label = "6"
+            label = int(label)
+
+            demographic_distributions["prior_interest"][label] = int(match.group(1))
 
     return demographic_distributions
 
 def extract_time_survey(text: str) -> dict:
     """
     Extracts time survey from CTEC text.
+
+    Args:
+        text: The cleaned text string from the PDF.
+
+    Returns:
+        {
+            "time_survey": {
+                "3 or fewer": int,
+                "4 - 7": int,
+                "8 - 11": int,
+                "12 - 15": int,
+                "16 - 19": int,
+                "20 or more": int
+            }
+        }
     """
     start = text.find("TIME-SURVEY QUESTION")
     end = text.find("Essay Questions")
@@ -312,16 +316,7 @@ def extract_time_survey(text: str) -> dict:
 
     time_survey_text = text[start:end].strip()
 
-    time_ranges = [
-        "3 or fewer",
-        "4 - 7",
-        "8 - 11",
-        "12 - 15",
-        "16 - 19",
-        "20 or more"
-    ]
-
-    for time_range in time_ranges:
+    for time_range in TIME_RANGES:
         pattern = rf"{re.escape(time_range)}\s+(\d+)\s+[\d.]+%"
         match = re.search(pattern, time_survey_text, flags=re.MULTILINE)
         if match:
@@ -331,39 +326,71 @@ def extract_time_survey(text: str) -> dict:
 def extract_all_info(pdf_path: str) -> dict:
     """
     Extracts all information from a CTEC PDF file.
-    Returns a dictionary containing course info, ratings, comments, term info, and distributions.
+
+    Args:
+        pdf_path: The full path to the PDF file.
+
+    Returns:
+        A dictionary containing course info, ratings, comments, term info, and distributions.
+
+    Example:
+    {
+        "code": str,
+        "title": str,
+        "school": str, # optional
+
+        "instructor": str,
+
+        "section": str,
+        "audience_size": int, # optional
+        "response_count": int, # optional
+        "quarter": str,
+        "year": int,
+
+        "comments": [ # optional
+            "comment1",
+            "comment2",
+            "comment3",
+            ...
+        ],
+
+        "survey_responses": {
+            "rating_of_instruction": {},
+            "rating_of_course": {},
+            "estimated_learning": {},
+            "intellectual_challenge": {},
+            "stimulating_instructor": {},
+            "school_name": {},
+            "class_year": {},
+            "reason_for_taking_course": {},
+            "prior_interest": {},
+            "time_survey": {},
+        }
+    }   
     """
-    # Extract raw text from PDF
-    raw_text = extract_text_from_pdf(pdf_path)
-    if not raw_text:
-        return {}
+    pdf_text = extract_text_from_pdf(pdf_path)
+    pdf_text = clean_text(pdf_text)
+    course_info = extract_code_title_instructor(pdf_text)
+    term_info = extract_quarter_and_year(pdf_text)
+    questions_1_5 = extract_distributions_from_pdf(pdf_path)
+    comments = extract_comments(pdf_text)
+    questions_6_10 = extract_demographics(pdf_text)
+    question_11 = extract_time_survey(pdf_text)
 
-    # Clean the text
-    cleaned_text = clean_text(raw_text)
+    survey_responses = questions_1_5 | questions_6_10 | question_11
 
-    # Extract all components
-    course_info = extract_course_info(cleaned_text)
-    ratings = extract_ratings(cleaned_text)
-    comments = extract_comments(raw_text)  # Use raw text for comments to preserve formatting
-    term_info = extract_quarter_and_year(cleaned_text)
-    distributions = extract_distributions(pdf_path)
-    demographics = extract_demographics(cleaned_text)
-    time_survey = extract_time_survey(cleaned_text)
-
-    # Combine all information into a single dictionary
-    result = {
-        "code": course_info["course_code"],
-        "title": course_info["course_title"],
-        "instructor": course_info["instructor"],
-        "quarter": term_info["quarter"],
-        "year": term_info["year"],
-        "ratings": ratings,
+    return {
+        "code": course_info['code'],
+        "title": course_info['title'],
+        "section": course_info['section'],
+        "school": course_info['school'] if 'school' in course_info else None,
+        "instructor": course_info['instructor'],
+        "audience_size": course_info['audience_size'] if 'audience_size' in course_info else None,
+        "response_count": course_info['response_count'] if 'response_count' in course_info else None,
+        "quarter": term_info['quarter'],
+        "year": term_info['year'],
         "comments": comments,
-        "distributions": distributions,
-        "demographics": demographics,
-        "time_survey": time_survey,
-        "audience_size": 2,
-        "response_count": 1
+        "survey_responses": survey_responses
     }
 
-    return result
+print(extract_all_info("backend/data/test.pdf"))
