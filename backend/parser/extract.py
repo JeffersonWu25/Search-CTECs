@@ -201,13 +201,19 @@ def extract_comments(raw_text: str) -> list:
         ]
     """
     # Find the comments section
-    start = raw_text.find("most important to you.") + len("most important to you.")
+    start = (
+        raw_text.find("Please summarize your reaction to this course focusing on the aspects that were most important to you.") 
+        + len("Please summarize your reaction to this course focusing on the aspects that were most important to you.")
+    )
     end = raw_text.find("DEMOGRAPHICS", start)
     if end == -1:
         end = len(raw_text)
 
     # Get the comments section and split into lines
     comment_text = raw_text[start:end].strip()
+    comment_text = comment_text.replace("Comments", "")
+    comment_text = re.sub(r"Student Report for .*?\d+/\d+", "", comment_text, flags=re.DOTALL)
+
     lines = [line.strip() for line in comment_text.split('\n') if line.strip()]
 
     # Filter out unwanted sections and combine lines into comments
@@ -215,8 +221,6 @@ def extract_comments(raw_text: str) -> list:
     current = []
 
     for line in lines:
-        if "Comments" in line or "Student Report for" in line:
-            continue
         if line[0].isupper() and current:
             comments.append(' '.join(current))
             current = [line]
@@ -225,6 +229,8 @@ def extract_comments(raw_text: str) -> list:
 
     if current:
         comments.append(' '.join(current))
+
+    print(comments)
 
     return comments
 
@@ -368,12 +374,12 @@ def extract_all_info(pdf_path: str) -> dict:
         }
     }   
     """
-    pdf_text = extract_text_from_pdf(pdf_path)
-    pdf_text = clean_text(pdf_text)
+    raw_text = extract_text_from_pdf(pdf_path)
+    pdf_text = clean_text(raw_text)
     course_info = extract_code_title_instructor(pdf_text)
     term_info = extract_quarter_and_year(pdf_text)
     questions_1_5 = extract_distributions_from_pdf(pdf_path)
-    comments = extract_comments(pdf_text)
+    comments = extract_comments(raw_text)
     questions_6_10 = extract_demographics(pdf_text)
     question_11 = extract_time_survey(pdf_text)
 
@@ -392,5 +398,3 @@ def extract_all_info(pdf_path: str) -> dict:
         "comments": comments,
         "survey_responses": survey_responses
     }
-
-print(extract_all_info("backend/data/test.pdf"))

@@ -11,8 +11,8 @@ from extract import extract_all_info
 # Load environment variables
 load_dotenv()
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
 def get_or_insert_course(code: str, title: str, school: str = None) -> str:
@@ -134,7 +134,7 @@ def create_survey_responses(course_offering_id: str, survey_question: str, distr
 
     return response.data[0]["id"]
 
-def create_comments(course_offering_id: str, comments: List[str]) -> int:
+def create_comments(course_offering_id: str, comments: List[str]) -> list[int]:
     """
     upload the comments of a CTEC course offering to the database.
 
@@ -145,6 +145,7 @@ def create_comments(course_offering_id: str, comments: List[str]) -> int:
     Returns:
         The database ID of the comment.
     """
+    comment_ids = []
     for comment in comments:
 
         comment_data = {
@@ -160,7 +161,9 @@ def create_comments(course_offering_id: str, comments: List[str]) -> int:
         if not response.data:
             raise ValueError("Comment insert failed or returned no data")
 
-        return response.data[0]["id"]
+        comment_ids.append(response.data[0]["id"])
+
+    return comment_ids
 
 
 def upload_ctec(pdf_path: str) -> Dict[str, Any]:
@@ -211,8 +214,9 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
 if __name__ == "__main__":
     # Example usage
     try:
-        result = upload_ctec("backend/data/test.pdf")
-        print("Successfully uploaded CTEC!")
-        print("Created records:", result)
+        for i in range(2, 11):
+            result = upload_ctec(f"backend/data/test{i}.pdf")
+            print(f"Successfully uploaded CTEC {i}!")
+            print("Created records:", result)
     except Exception as e:
         print(f"Failed to upload CTEC: {e}")

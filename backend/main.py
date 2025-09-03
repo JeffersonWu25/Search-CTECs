@@ -2,22 +2,29 @@
 
 import os
 from typing import List, Optional, Dict, Any
+import uuid
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, UploadFile
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from pydantic import BaseModel
 
+# Load envirobment variables
 load_dotenv()
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
+# Start app
 app = FastAPI(title="CTEC API")
+
+origins = [
+    "http://localhost:3000",
+]
 
 # Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,225 +34,241 @@ app.add_middleware(
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Data Models (Pydantic) ---
+class Requirement(BaseModel):
+    id: uuid.UUID
+    name: str
 
 class Course(BaseModel):
-    course_id: str
-    course_name: str
-    department: Optional[str] = None
+    id: uuid.UUID
+    code: str
+    title: str
+    school: Optional[str] = None
+    requirements: Optional[List[Requirement]] = None
 
 class Instructor(BaseModel):
-    instructor_id: int
-    instructor_name: str
+    id: uuid.UUID
+    name: str
 
-class Report(BaseModel):
-    report_id: int
-    course: Course
-    instructor: Instructor
-    term: Optional[str] = None
-    year: Optional[int] = None
-
-class Rating(BaseModel):
-    rating_id: int
-    question_number: int
-    mean: float
-    response_count: int
+class SurveyResponse(BaseModel):
+    id: uuid.UUID
+    survey_question: str
+    distribution: Dict[str, Any]
 
 class Comment(BaseModel):
-    comment_id: int
-    comment_text: str
+    id: uuid.UUID
+    content: str
 
-class FullReport(BaseModel):
-    report: Report
-    ratings: List[Rating]
-    comments: List[Comment]
+class Offering(BaseModel):
+    id: uuid.UUID
+    course: Course
+    instructor: Instructor
+    quarter: str
+    year: int
+    audience_size: Optional[int] = None
+    response_count: Optional[int] = None
+    section: int
+    survey_responses: List[SurveyResponse]
+    comments: Optional[List[Comment]] = None # optional to reduce transfer size
+
+# --- Helper functions ---
+
+def unwrap_requirements(course_data: dict) -> dict:
+    """
+    Unwraps nested Supabase course.requirements from
+    [{ "requirement": {id, name} }, ...]
+    into
+    [{id, name}, ...]
+
+    Args:
+        course_data: dict returned by Supabase for a course
+
+    Returns:
+        The same dict but with 'requirements' flattened
+    """
+    wrapped = course_data.get("requirements") or []
+    flat = [
+        r["requirement"]
+        for r in wrapped
+        if isinstance(r, dict) and r.get("requirement")
+    ]
+    course_data["requirements"] = flat
+    return course_data
 
 # --- API Endpoints ---
 
-@app.get("/reports", response_model=List[Report])
-async def get_reports(
+@app.get("/")
+async def root():
+    """
+    Root endpoint for API health check and documentation.
+    """
+    return {
+        "message": "CTEC API is running",
+        "endpoints": {
+            "offerings": "/offerings",
+            "search": "/search",
+            "offering_detail": "/offerings/{offering_id}",
+            "docs": "/docs"
+        }
+    }
+
+@app.get("/offerings", response_model=List[Offering])
+async def get_offerings(
     skip: int = Query(0, description="Offset for pagination"),
-    limit: int = Query(10, description="Maximum number of reports to return")
+    limit: int = Query(10, description="Maximum number of course offerings to return")
 ):
     """
-    Returns a list of all reports (paginated).
+    Returns a list of all course offerings and their info except comments (paginated).
+    Comments are not included to reduce transfer size.
+
+    args:
+        skip: int = Query(0, description="Offset for pagination")
+        limit: int = Query(10, description="Maximum number of course offerings to return")
+
+    returns:
+        List[Offering]: A list of course offerings
     """
+
     try:
-        response = supabase.from_('reports').select('''
-            report_id,
-            courses (course_id, course_name, department),
-            instructors (instructor_id, instructor_name),
-            term,
-            year
-        ''').range(skip, skip + limit - 1).execute()
+        response = (supabase.from_('course_offerings').select(
+            "id,quarter,year,audience_size,response_count,section,"
+            "course:courses("
+                "id,code,title,school,"
+                "requirements:course_requirements("
+                    "requirement:requirements(id,name)"
+                ")"
+            "),"
+            "instructor:instructors(id,name),"
+            "survey_responses:survey_responses(id,distribution,survey_question)"
+        ).range(skip, skip + limit - 1).execute())
         if response.data:
-            reports = []
+            offerings = []
             for row in response.data:
-                reports.append(Report(
-                    report=Report(
-                        report_id=row['report_id'],
-                        course=Course(**row['courses']),
-                        instructor=Instructor(**row['instructors']),
-                        term=row['term'],
-                        year=row['year']
-                    ),
-                    course=Course(**row['courses']),
-                    instructor=Instructor(**row['instructors']),
-                    term=row['term'],
-                    year=row['year']
+                course_data = unwrap_requirements(row["course"])
+                offerings.append(Offering(
+                    id=row['id'],
+                    quarter=row['quarter'],
+                    year=row['year'],
+                    audience_size=row['audience_size'],
+                    response_count=row['response_count'],
+                    section=row['section'],
+                    course=Course(**course_data),
+                    instructor=Instructor(**row['instructor']),
+                    survey_responses=[SurveyResponse(**sr) for sr in row['survey_responses']],
                 ))
-            return reports
+            print(offerings)
+            return offerings
         else:
-            raise HTTPException(status_code=404, detail="No reports found")
+            return []
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
-@app.get("/reports/{report_id}", response_model=FullReport)
-async def get_report(report_id: int):
+@app.get("/offerings/{offering_id}", response_model=Offering)
+async def get_offering(offering_id: str):
     """
-    Returns the details of a specific report.
+    Returns all crutial info for a specific offering.
+
+    args:
+        offering_id: int = Path(..., description="The ID of the offering to retrieve")
+
+    returns:
+        Offering: The data for that specific course offering
     """
     try:
-        report_response = supabase.from_('reports').select('''
-            report_id,
-            courses (course_id, course_name, department),
-            instructors (instructor_id, instructor_name),
-            term,
-            year
-        ''').eq('report_id', report_id).execute()
-        ratings_response = supabase.from_('ratings').select('*').eq('report_id', report_id).execute()
-        comments_response = supabase.from_('comments').select('*').eq('report_id', report_id).execute()
-
-        if report_response.data:
-            report_data = report_response.data[0]
-            report = Report(
-                report=Report(
-                    report_id=report_data['report_id'],
-                    course=Course(**report_data['courses']),
-                    instructor=Instructor(**report_data['instructors']),
-                    term=report_data['term'],
-                    year=report_data['year']
-                ),
-                course=Course(**report_data['courses']),
-                instructor=Instructor(**report_data['instructors']),
-                term=report_data['term'],
-                year=report_data['year']
-            )
-            ratings = [Rating(**rating) for rating in ratings_response.data]
-            comments = [Comment(**comment) for comment in comments_response.data]
-            return FullReport(report=report, ratings=ratings, comments=comments)
-        else:
-            raise HTTPException(status_code=404, detail="Report not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/search", response_model=List[Report])
-async def search_reports(
-    query: str = Query(..., min_length=3, description="Search query (course name, instructor, etc.)"),
-    skip: int = Query(0, description="Offset for pagination"),
-    limit: int = Query(10, description="Maximum number of reports to return")
-):
-    """
-    Searches for reports based on a query string (paginated).
-    """
-    try:
-        # Simple search (adjust as needed for more advanced search)
-        response = supabase.from_('reports').select('''
-            report_id,
-            courses (course_id, course_name, department),
-            instructors (instructor_id, instructor_name),
-            term,
-            year
-        ''').ilike('courses.course_name', f'%{query}%').ilike('instructors.instructor_name', f'%{query}%').range(skip, skip + limit - 1).execute()
+        response = supabase.from_('course_offerings').select(
+            "id,quarter,year,audience_size,response_count,section,"
+            "course:courses("
+                "id,code,title,school," 
+                "requirements:course_requirements("
+                    "requirement:requirements(id,name)"
+                ")"
+            "),"
+            "instructor:instructors(id,name),"
+            "comments:comments(id,content),"
+            "survey_responses:survey_responses(id,distribution,survey_question)"
+        ).eq('id', offering_id).execute()
 
         if response.data:
-            reports = [
-                Report(
-                    report=Report(
-                        report_id=row['report_id'],
-                        course=Course(**row['courses']),
-                        instructor=Instructor(**row['instructors']),
-                        term=row['term'],
-                        year=row['year']
-                    ),
-                    course=Course(**row['courses']),
-                    instructor=Instructor(**row['instructors']),
-                    term=row['term'],
-                    year=row['year']
-                )
-                for row in response.data
-            ]
-            return reports
+            offering_data = response.data[0]
+            course_data = unwrap_requirements(offering_data['course'])
+
+            offering = Offering(
+                id=offering_data['id'],
+                quarter=offering_data['quarter'],
+                year=offering_data['year'],
+                audience_size=offering_data['audience_size'],
+                response_count=offering_data['response_count'],
+                section=offering_data['section'],
+                course=Course(**course_data),
+                instructor=Instructor(**offering_data['instructor']),
+                survey_responses=[SurveyResponse(**response) for response in offering_data['survey_responses']],
+                comments=[Comment(**comment) for comment in offering_data['comments']],
+            )
+            return offering
         else:
-            raise HTTPException(status_code=404, detail="No matching reports found")
+            raise HTTPException(status_code=404, detail="Offering not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
-@app.post("/api/ctecs/upload")
-async def upload_ctec(file: UploadFile) -> Dict[str, Any]:
+@app.get("/search", response_model=List[Offering])
+async def search_offerings(
+    query: str = Query(..., min_length=3, description="Search query (course name, instructor)"),
+    skip: int = Query(0, description="Offset for pagination"),
+    limit: int = Query(10, description="Maximum number of offerings to return")
+):
     """
-    Upload and process a CTEC PDF file.
-    Returns the created records' IDs and basic info.
+    Searches for offerings based on a query string and returns list of offerings (paginated).
+    comments are not included to reduce transfer size.
+
+    args:
+        query: str = Query(..., min_length=3, description="Search query (course name, instructor)")
+        skip: int = Query(0, description="Offset for pagination")
+        limit: int = Query(10, description="Maximum number of offerings to return")
+
+    returns:
+        List[Offering]: A list of course offerings
     """
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="File must be a PDF")
-    
+
     try:
-        # Create temp directory if it doesn't exist
-        os.makedirs("temp", exist_ok=True)
-        
-        # Save uploaded file temporarily
-        temp_path = f"temp/{file.filename}"
-        try:
-            # Save uploaded file
-            content = await file.read()
-            with open(temp_path, "wb") as f:
-                f.write(content)
-            
-            # Process and upload the PDF
-            from backend.parser.upload_data import upload_ctec as process_ctec
-            result = process_ctec(temp_path)
-            
-            return {
-                "status": "success",
-                "data": result
-            }
-            
-        finally:
-            # Clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-                
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        response = (
+        supabase
+        .from_("course_offerings")
+        .select(
+            "id,quarter,year,audience_size,response_count,section,"
+            "course:courses!inner("
+                "id,code,title,school,"
+                "requirements:course_requirements("
+                    "requirement:requirements(id,name)"
+                ")"
+            "),"
+            "instructor:instructors!inner(id,name),"
+            "survey_responses:survey_responses(id,distribution,survey_question)"
+        )
+        .ilike("courses.title", f"*{query}*")
+        .range(skip, skip + limit - 1)
+        .execute()
+    )
 
-@app.get("/api/courses")
-async def get_courses() -> Dict[str, Any]:
-    """
-    Get all courses with their CTEC reviews.
-    """
-    try:
-        response = supabase.table("courses").select("*, course_offerings(*, ctec_reviews(*, ctec_responses(*)))").execute()
-        return response.data
+        if response.data:
+            print(response.data)
+            offerings = []
+            for row in response.data:
+                course_data = unwrap_requirements(row["course"])
+                offerings.append(Offering(
+                    id=row['id'],
+                    quarter=row['quarter'],
+                    year=row['year'],
+                    audience_size=row['audience_size'],
+                    response_count=row['response_count'],
+                    section=row['section'],
+                    course=Course(**course_data),
+                    instructor=Instructor(**row['instructor']),
+                    survey_responses=[SurveyResponse(**sr) for sr in row['survey_responses']],
+                ))
+            print(offerings)
+            print("ERROR:", getattr(response, "error", None))
+            return offerings
+        else:
+            print(f"No matching offerings found for query: {query}")
+            return []
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/courses/{course_code}")
-async def get_course(course_code: str) -> Dict[str, Any]:
-    """
-    Get a specific course by its code with CTEC reviews.
-    """
-    try:
-        response = supabase.table("courses").select(
-            "*, course_offerings(*, ctec_reviews(*, ctec_responses(*)))"
-        ).eq("code", course_code).execute()
-        
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Course not found")
-            
-        return response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        raise HTTPException(status_code=500, detail=str(e)) from e
