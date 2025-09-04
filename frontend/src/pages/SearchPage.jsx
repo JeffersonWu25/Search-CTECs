@@ -6,7 +6,7 @@ import { SearchResults } from '../components/search/SearchResults'
 import '../App.css'
 
 export function SearchPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedCourses, setSelectedCourses] = useState([])
   const [selectedInstructors, setSelectedInstructors] = useState([])
   const [selectedRequirements, setSelectedRequirements] = useState([])
@@ -17,6 +17,7 @@ export function SearchPage() {
     const selectedId = searchParams.get('selectedId')
     const selectedTitle = searchParams.get('selectedTitle')
     const selectedCode = searchParams.get('selectedCode')
+    const requirements = searchParams.get('requirements')
 
     if (selectedType && selectedId && selectedTitle) {
       if (selectedType === 'course') {
@@ -34,7 +35,30 @@ export function SearchPage() {
         setSelectedInstructors([instructor])
       }
     }
+
+    // Restore requirements from URL
+    if (requirements) {
+      try {
+        const reqArray = JSON.parse(decodeURIComponent(requirements))
+        setSelectedRequirements(reqArray)
+      } catch (e) {
+        console.warn('Failed to parse requirements from URL:', e)
+      }
+    }
   }, [searchParams])
+
+  // Update URL when requirements change
+  useEffect(() => {
+    if (selectedRequirements.length > 0) {
+      const params = new URLSearchParams(searchParams)
+      params.set('requirements', encodeURIComponent(JSON.stringify(selectedRequirements)))
+      setSearchParams(params, { replace: true })
+    } else {
+      const params = new URLSearchParams(searchParams)
+      params.delete('requirements')
+      setSearchParams(params, { replace: true })
+    }
+  }, [selectedRequirements, searchParams, setSearchParams])
 
   const handleAddCourse = (course) => {
     if (!selectedCourses.find(c => c.id === course.id)) {

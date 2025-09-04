@@ -70,6 +70,7 @@ class Offering(BaseModel):
     section: int
     survey_responses: List[SurveyResponse]
     comments: Optional[List[Comment]] = None # optional to reduce transfer size
+    ai_summary: Optional[str] = None
 
 # --- Helper functions ---
 
@@ -176,7 +177,7 @@ async def get_offering(offering_id: str):
     """
     try:
         response = supabase.from_('course_offerings').select(
-            "id,quarter,year,audience_size,response_count,section,"
+            "id,quarter,year,audience_size,response_count,section,ai_summary,"
             "course:courses("
                 "id,code,title,school," 
                 "requirements:course_requirements("
@@ -198,6 +199,7 @@ async def get_offering(offering_id: str):
                 year=offering_data['year'],
                 audience_size=offering_data['audience_size'],
                 response_count=offering_data['response_count'],
+                ai_summary=offering_data['ai_summary'],
                 section=offering_data['section'],
                 course=Course(**course_data),
                 instructor=Instructor(**offering_data['instructor']),

@@ -7,9 +7,13 @@ from typing import Dict, Any, List
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from extract import extract_all_info
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.5-flash")
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -72,7 +76,7 @@ def get_or_insert_instructor(name: str) -> int:
 
     return insert_response.data[0]["id"]
 
-def create_course_offering(course_id: str, instructor_id: str, quarter: str, year: int, audience_size: int, response_count: int, section: int) -> int:
+def create_course_offering(course_id: str, instructor_id: str, quarter: str, year: int, audience_size: int, response_count: int, section: int, ai_summary: str) -> int:
     """
     Create a course offering and return its ID.
     Links a course with an instructor for a specific term.
@@ -96,7 +100,8 @@ def create_course_offering(course_id: str, instructor_id: str, quarter: str, yea
         "year": year,
         "audience_size": audience_size,
         "response_count": response_count,
-        "section": section
+        "section": section,
+        "ai_summary": ai_summary
     }
 
     response = supabase.table("course_offerings").upsert(
@@ -165,6 +170,45 @@ def create_comments(course_offering_id: str, comments: List[str]) -> list[int]:
 
     return comment_ids
 
+def generate_ai_summary(comments: List[str]) -> str:
+    """
+    Generate a summary of the comments using AI.
+
+    Args:
+        comments: the list of string comments
+
+    Returns:
+        the AI summary of the comments
+    """
+    query = f"""
+    You are summarizing student course evaluation comments.
+
+    TASK:
+    - If there are no comments, return exactly: "No comments provided."
+    - Otherwise, write a clear, concise summary that must be no longer than 125 words.
+    - everything should be in one paragraph.
+
+    CONTENT TO HIGHLIGHT (only if present in the comments):
+    - Major assignments and grading policy (include percentages only if explicitly mentioned)
+    - What students reported learning from the course and whether the content was useful
+    - Course difficulty and workload/time commitment
+    - Major likes (what students appreciated)
+    - Major dislikes (what students did not like)
+    - Instructor teaching quality
+    - Any other important information mentioned
+    - TLDR recommendation (only if there is a clear consensus in the comments)
+
+    RULES:
+    - Use only information explicitly found in the comments.
+    - Do not speculate or add details not present.
+    - Keep the style neutral, professional, and helpful for students deciding on the course.
+    - Output should be plain text, no bullet points.
+
+    Here are the comments:
+    {comments}
+    """
+    response = model.generate_content(query)
+    return response.text
 
 def upload_ctec(pdf_path: str) -> Dict[str, Any]:
     """
@@ -184,17 +228,24 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
         if not extracted_data:
             raise ValueError(f"No data extracted from {pdf_path}")
 
+        # Generate AI summary of the comments
+        ai_summary = generate_ai_summary(extracted_data["comments"])
+
         # Create records in correct order (following foreign key relationships)
         course_id = get_or_insert_course(extracted_data["code"], extracted_data["title"], extracted_data["school"])
         instructor_id = get_or_insert_instructor(extracted_data["instructor"])
 
         offering_id = create_course_offering(course_id, instructor_id, extracted_data["quarter"],
                                              extracted_data["year"], extracted_data["audience_size"],
-                                             extracted_data["response_count"], extracted_data["section"])
+                                             extracted_data["response_count"], extracted_data["section"],
+                                             ai_summary)
 
         # upload survey responses
         for question, distribution in extracted_data["survey_responses"].items():
             create_survey_responses(offering_id, question, distribution)
+
+        # remove previous comments attached to the offering
+        supabase.table("comments").delete().eq("course_offering_id", offering_id).execute()
 
         # upload comments
         create_comments(offering_id, extracted_data["comments"])

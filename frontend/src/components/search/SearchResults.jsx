@@ -109,7 +109,17 @@ export function SearchResults({ selectedCourses, selectedInstructors, selectedRe
   }
 
   const handleResultClick = (offering) => {
-    navigate(`/offering/${offering.id}`)
+    // Preserve current search state in URL when navigating to detail page
+    const currentParams = new URLSearchParams(window.location.search)
+    const searchState = {
+      selectedCourses,
+      selectedInstructors,
+      selectedRequirements
+    }
+    
+    // Add search state to URL parameters
+    currentParams.set('searchState', encodeURIComponent(JSON.stringify(searchState)))
+    navigate(`/offering/${offering.id}?${currentParams.toString()}`)
   }
 
   return (

@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout'
 import { RatingDistributionChart } from '../components/common/RatingDistributionChart'
@@ -8,9 +8,53 @@ const API_BASE_URL = 'http://localhost:8000'
 export function DetailPage() {
     const { selectedId } = useParams()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const [ offering, setOffering ] = useState(null)
     const [ loading, setLoading ] = useState(true)
     const [ error, setError ] = useState(null)
+
+    const handleBackToSearch = () => {
+        // Check if we have search state in URL parameters
+        const searchState = searchParams.get('searchState')
+        
+        if (searchState) {
+            try {
+                const state = JSON.parse(decodeURIComponent(searchState))
+                // Navigate back to search with preserved state
+                const params = new URLSearchParams()
+                
+                // Restore courses
+                if (state.selectedCourses && state.selectedCourses.length > 0) {
+                    const course = state.selectedCourses[0] // Assuming single course selection
+                    params.set('selectedType', 'course')
+                    params.set('selectedId', course.id)
+                    params.set('selectedTitle', course.title)
+                    if (course.code) params.set('selectedCode', course.code)
+                }
+                
+                // Restore instructors
+                if (state.selectedInstructors && state.selectedInstructors.length > 0) {
+                    const instructor = state.selectedInstructors[0] // Assuming single instructor selection
+                    params.set('selectedType', 'instructor')
+                    params.set('selectedId', instructor.id)
+                    params.set('selectedTitle', instructor.name)
+                }
+                
+                // Restore requirements
+                if (state.selectedRequirements && state.selectedRequirements.length > 0) {
+                    params.set('requirements', encodeURIComponent(JSON.stringify(state.selectedRequirements)))
+                }
+                
+                navigate(`/search?${params.toString()}`)
+            } catch (e) {
+                console.warn('Failed to parse search state:', e)
+                navigate('/search')
+            }
+        } else {
+            // Fallback to regular back navigation
+            navigate(-1)
+        }
+    }
 
     useEffect(() => {
         const fetchOfferingDetails = async() => {
@@ -71,7 +115,7 @@ export function DetailPage() {
                     <div className="error-state">
                         <h2>Error</h2>
                         <p>{error || 'Offering not found'}</p>
-                        <button onClick={() => navigate('/search')} className='back-btn'>
+                        <button onClick={handleBackToSearch} className='back-btn'>
                             Back to Search
                         </button>
                     </div>
@@ -85,16 +129,52 @@ export function DetailPage() {
             <div className="detail-page">
                 {/* Header Section */}
                 <div className="detail-header">
-                    <button onClick={() => navigate('/search')} className='back-btn'>
-                        ← Back to Search
-                    </button>
+                    <div className="header-navigation">
+                        <button onClick={handleBackToSearch} className='back-btn'>
+                            <svg className="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M19 12H5M12 19l-7-7 7-7"/>
+                            </svg>
+                            Back to Search
+                        </button>
+                    </div>
+                    
                     <div className="header-content">
-                        <h1>{offering.course?.title || "Unknown Course"}</h1>
-                        <p className='course-code'>{offering.course?.code || 'N/A'}</p>
+                        <div className="course-title-section">
+                            <h1 className="course-title">{offering.course?.title || "Unknown Course"}</h1>
+                            <div className="course-meta">
+                                <span className="course-code">{offering.course?.code || 'N/A'}</span>
+                                <span className="course-instructor">with {offering.instructor?.name || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
                         <div className="header-badges">
-                            <span className="badge school-badge">{offering.course?.school || 'N/A'}</span>
-                            <span className="badge term-badge">{offering.quarter} {offering.year}</span>
-                            <span className="badge section-badge">Section {offering.section}</span>
+                            <div className="badge-group">
+                                <span className="badge school-badge">
+                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                    </svg>
+                                    {offering.course?.school || 'N/A'}
+                                </span>
+                                <span className="badge term-badge">
+                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    {offering.quarter} {offering.year}
+                                </span>
+                                <span className="badge section-badge">
+                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    Section {offering.section}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -137,6 +217,16 @@ export function DetailPage() {
                                             <span className="requirement-name">{req.name}</span>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI Summary Card */}
+                        {offering.ai_summary && (
+                            <div className="info-card">
+                                <h3>🤖 AI Summary</h3>
+                                <div className="ai-summary-content">
+                                    <p>{offering.ai_summary}</p>
                                 </div>
                             </div>
                         )}

@@ -201,6 +201,8 @@ def extract_comments(raw_text: str) -> list:
         ]
     """
     # Find the comments section
+    if raw_text.find("Please summarize your reaction to this course focusing on the aspects that were most important to you.") == -1:
+        return []
     start = (
         raw_text.find("Please summarize your reaction to this course focusing on the aspects that were most important to you.") 
         + len("Please summarize your reaction to this course focusing on the aspects that were most important to you.")
