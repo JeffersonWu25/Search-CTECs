@@ -1,3 +1,7 @@
+/*
+This is the search bar component for the home page
+*/
+
 import { useSearch } from '../../hooks/useSearch'
 import './Search.css'
 

@@ -1,3 +1,7 @@
+/*
+This is the homepage component that displays the hero section
+*/
+
 import { useNavigate } from 'react-router-dom'
 import { Layout } from '../components/layout/Layout'
 import { SearchBar } from '../components/search/SearchBar'

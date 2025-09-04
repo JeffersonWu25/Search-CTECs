@@ -3,7 +3,7 @@ import { searchOfferings } from '../../services/offerings'
 import { useNavigate } from 'react-router-dom'
 import './Search.css'
 
-export function SearchResults({ selectedCourses, selectedInstructors }) {
+export function SearchResults({ selectedCourses, selectedInstructors, selectedRequirements }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -22,11 +22,30 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
       try {
         const filters = {
           courseIds: selectedCourses.map(course => course.id),
-          instructorIds: selectedInstructors.map(instructor => instructor.id)
+          instructorIds: selectedInstructors.map(instructor => instructor.id),
+          requirements: selectedRequirements,
+          limit: 10,
+          offset: 0
         }
 
-        const data = await searchOfferings(filters)
-        setResults(data)
+        const result = await searchOfferings(filters)
+        
+        // Filter results by requirements if any are selected
+        let filteredResults = result.data
+        if (selectedRequirements.length > 0) {
+          filteredResults = result.data.filter(offering => {
+            // Unwrap the nested requirements structure
+            const courseRequirements = offering.course?.requirements || []
+            const unwrappedRequirements = courseRequirements.map(req => req.requirement).filter(Boolean)
+            const requirementIds = unwrappedRequirements.map(req => req.id)
+            
+            return selectedRequirements.some(selectedReqId => 
+              requirementIds.includes(selectedReqId)
+            )
+          })
+        }
+        
+        setResults(filteredResults)
       } catch (err) {
         console.error('Error fetching results:', err)
         setError('Failed to load search results')
@@ -36,7 +55,7 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
     }
 
     fetchResults()
-  }, [selectedCourses, selectedInstructors])
+  }, [selectedCourses, selectedInstructors, selectedRequirements])
 
   const handleRetry = () => {
     setError(null)
@@ -99,6 +118,7 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
         <h3>Search Results ({results.length})</h3>
         <p>
           Showing CTEC reviews for {selectedCourses.length} course(s), {selectedInstructors.length} instructor(s)
+          {selectedRequirements.length > 0 && `, ${selectedRequirements.length} requirement(s)`}
         </p>
       </div>
       <div className="results-list">
@@ -109,15 +129,15 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
                style={{ cursor: 'pointer' }}
           >
             <div className="result-card-header">
-              <h4>{offering.courses?.title || 'Unknown Course'}</h4>
+              <h4>{offering.course?.title || 'Unknown Course'}</h4>
               <span className="course-code">
-                {offering.courses?.code || 'N/A'}
+                {offering.course?.code || 'N/A'}
               </span>
             </div>
             <div className="result-card-content">
               <div className="offering-info">
                 <div className="instructor-info">
-                  <strong>Instructor:</strong> {offering.instructors?.name || 'Unknown'}
+                  <strong>Instructor:</strong> {offering.instructor?.name || 'Unknown'}
                 </div>
                 <div className="term-info">
                   <strong>Term:</strong> {offering.quarter} {offering.year}
@@ -125,9 +145,6 @@ export function SearchResults({ selectedCourses, selectedInstructors }) {
               </div>
             </div>
             <div className="result-card-footer">
-              <span className="offering-date">
-                {offering.created_at ? new Date(offering.created_at).toLocaleDateString() : ''}
-              </span>
               <span className="click-hint">Click to view details →</span>
             </div>
           </div>

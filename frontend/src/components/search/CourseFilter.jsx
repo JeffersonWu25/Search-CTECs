@@ -5,7 +5,7 @@ import './Search.css'
 // Course requirements
 const COURSE_REQUIREMENTS = [
   { id: 'distro', label: 'Distribution Requirements', options: [
-    { id: 'formal_studies', label: 'Formal Studies' },
+    { id: 'a5103993-a0a8-41ff-b73c-702fc481e8c2', label: 'Formal Studies' },
     { id: 'natural_sciences', label: 'Natural Sciences' },
     { id: 'social_behavioral', label: 'Social & Behavioral Sciences' },
     { id: 'historical_studies', label: 'Historical Studies' },

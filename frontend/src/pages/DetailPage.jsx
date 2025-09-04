@@ -1,8 +1,9 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { detailPageInfo } from '../services/detailPage'
 import { Layout } from '../components/layout/Layout'
 import { RatingDistributionChart } from '../components/common/RatingDistributionChart'
+
+const API_BASE_URL = 'http://localhost:8000'
 
 export function DetailPage() {
     const { selectedId } = useParams()
@@ -20,10 +21,21 @@ export function DetailPage() {
             }
 
             try{
-                // Pass selectedId to detailPageInfo
-                const offeringDetails = await detailPageInfo(selectedId)
+                // Use backend API endpoint
+                const response = await fetch(`${API_BASE_URL}/offerings/${selectedId}`)
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setError('Offering not found')
+                    } else {
+                        setError('Failed to load offering details')
+                    }
+                    return
+                }
 
-                if (!offeringDetails || offeringDetails.length === 0){
+                const offeringDetails = await response.json()
+
+                if (!offeringDetails){
                     setError('No offering details found')
                 } else {
                     setOffering(offeringDetails)
@@ -71,79 +83,116 @@ export function DetailPage() {
     return (
         <Layout>
             <div className="detail-page">
+                {/* Header Section */}
                 <div className="detail-header">
                     <button onClick={() => navigate('/search')} className='back-btn'>
-                        Back to Search
+                        ← Back to Search
                     </button>
-                    <h1>{offering.courses?.title || "Unknown Course"}</h1>
-                    <p className='course-code'>{offering.courses?.code || 'N/A'}</p>
-                </div>
-
-                <div className="detail-content">
-          <div className="offering-info">
-            <div className="info-section">
-              <h3>Course Information</h3>
-              <div className="info-grid">
-                <div className="info-item">
-                  <strong>Course Title:</strong> {offering.courses?.title || 'N/A'}
-                </div>
-                <div className="info-item">
-                  <strong>Course Code:</strong> {offering.courses?.code || 'N/A'}
-                </div>
-                <div className="info-item">
-                  <strong>Instructor:</strong> {offering.instructors?.name || 'N/A'}
-                </div>
-                <div className="info-item">
-                  <strong>Quarter:</strong> {offering.quarter || 'N/A'}
-                </div>
-                <div className="info-item">
-                  <strong>Year:</strong> {offering.year || 'N/A'}
-                </div>
-              </div>
-            </div>
-
-            {offering.ctec_responses && offering.ctec_responses.length > 0 && (
-              <div className="reviews-section">
-                <h3>CTEC Reviews ({offering.ctec_responses.length})</h3>
-                <div className="reviews-list">
-                  {offering.ctec_responses.map((response) => (
-                    <div key={response.id} className="review-card">
-                      <div className="review-header">
-                        <div className="review-rating">
-                          <strong>Question:</strong> {response.ctec_questions?.text || 'N/A'}
-                          <strong>Overall Rating:</strong> {response.mean_score || 'N/A'}/5
-                          
+                    <div className="header-content">
+                        <h1>{offering.course?.title || "Unknown Course"}</h1>
+                        <p className='course-code'>{offering.course?.code || 'N/A'}</p>
+                        <div className="header-badges">
+                            <span className="badge school-badge">{offering.course?.school || 'N/A'}</span>
+                            <span className="badge term-badge">{offering.quarter} {offering.year}</span>
+                            <span className="badge section-badge">Section {offering.section}</span>
                         </div>
-                        <div className="review-date">
-                          {response.created_at ? new Date(response.created_at).toLocaleDateString() : 'N/A'}
-                        </div>
-                      </div>
-                      
-                      {/* Rating Distribution Chart */}
-                      {response.distribution && Object.keys(response.distribution).length > 0 && (
-                        <RatingDistributionChart distribution={response.distribution} />
-                      )}
-                      
-                      {response.comments && (
-                        <div className="review-comments">
-                          <strong>Comments:</strong>
-                          <p>{response.comments}</p>
-                        </div>
-                      )}
                     </div>
-                  ))}
                 </div>
-              </div>
-            )}
 
-            {(!offering.ctec_reviews || offering.ctec_reviews.length === 0) && (
-              <div className="no-reviews">
-                <h3>No CTEC Reviews</h3>
-                <p>No reviews have been submitted for this course offering yet.</p>
-              </div>
-            )}
-          </div>
-        </div>
+                {/* Main Content Grid */}
+                <div className="detail-content">
+                    {/* Left Column - Course Info & Requirements */}
+                    <div className="left-column">
+                        {/* Course Information Card */}
+                        <div className="info-card">
+                            <h3>📚 Course Information</h3>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Instructor</span>
+                                    <span className="info-value">{offering.instructor?.name || 'N/A'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">School</span>
+                                    <span className="info-value">{offering.course?.school || 'N/A'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Term</span>
+                                    <span className="info-value">{offering.quarter} {offering.year}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Section</span>
+                                    <span className="info-value">{offering.section || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Requirements Card */}
+                        {offering.course?.requirements && offering.course.requirements.length > 0 && (
+                            <div className="info-card">
+                                <h3>🎯 Requirements Fulfilled</h3>
+                                <div className="requirements-list">
+                                    {offering.course.requirements.map((req) => (
+                                        <div key={req.id} className="requirement-item">
+                                            <span className="requirement-icon">✓</span>
+                                            <span className="requirement-name">{req.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Comments Card */}
+                        {offering.comments && offering.comments.length > 0 && (
+                            <div className="info-card">
+                                <h3>💬 Student Comments</h3>
+                                <div className="comments-list">
+                                    {offering.comments.map((comment, index) => (
+                                        <div key={comment.id || index} className="comment-item">
+                                            <div className="comment-content">
+                                                {comment.content}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right Column - Survey Responses */}
+                    <div className="right-column">
+                        {offering.survey_responses && offering.survey_responses.length > 0 ? (
+                            <div className="reviews-section">
+                                <div className="section-header">
+                                    <h3>📊 CTEC Survey Results</h3>
+                                    <span className="response-count">{offering.survey_responses.length} questions</span>
+                                </div>
+                                <div className="reviews-list">
+                                    {offering.survey_responses.map((response) => (
+                                        <div key={response.id} className="review-card">
+                                            <div className="review-header">
+                                                <h4 className="question-title">
+                                                    {response.survey_question?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}
+                                                </h4>
+                                            </div>
+                                            
+                                            {/* Rating Distribution Chart */}
+                                            {response.distribution && Object.keys(response.distribution).length > 0 && (
+                                                <RatingDistributionChart distribution={response.distribution} />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="no-reviews">
+                                <div className="empty-state">
+                                    <h3>📊 No Survey Data</h3>
+                                    <p>No CTEC survey responses are available for this course offering.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </Layout>
     )

@@ -5,6 +5,7 @@ import {
   YAxis,
   ResponsiveContainer,
   Cell,
+  Tooltip,
 } from 'recharts'
 import { useRef } from 'react'
 
@@ -15,17 +16,18 @@ export function RatingDistributionChart({ distribution }) {
   const distinctHues = [0, 40, 80, 120, 160, 200, 240, 280, 320] // ~40° hue spread
 
   const getBarColor = (numeric, label) => {
+    // Bolder, more vibrant colors for better visibility
     const numericColors = {
-      1: '#fecaca',
-      2: '#99f6e4',
-      3: '#fbcfe8',
-      4: '#fef3c7',
-      5: '#bbf7d0',
-      6: '#ddd6fe',
+      1: '#ef4444', // Red
+      2: '#f97316', // Orange
+      3: '#eab308', // Yellow
+      4: '#22c55e', // Green
+      5: '#3b82f6', // Blue
+      6: '#8b5cf6', // Purple
     }
 
     if (numeric !== null) {
-      return numericColors[numeric] || '#e5e7eb'
+      return numericColors[numeric] || '#6b7280'
     }
 
     const generatedColors = generatedColorsRef.current
@@ -33,7 +35,8 @@ export function RatingDistributionChart({ distribution }) {
 
     if (!generatedColors[label]) {
       const hue = distinctHues[hueIndex % distinctHues.length]
-      const color = `hsl(${hue}, 70%, 75%)`
+      // More saturated colors for better visibility
+      const color = `hsl(${hue}, 80%, 50%)`
       generatedColors[label] = color
       hueIndexRef.current++
     }
@@ -76,6 +79,31 @@ export function RatingDistributionChart({ distribution }) {
         : 0
   })
 
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="chart-tooltip">
+          <div className="tooltip-header">
+            <span className="tooltip-label">{label}</span>
+          </div>
+          <div className="tooltip-content">
+            <div className="tooltip-stat">
+              <span>Count:</span>
+              <span className="tooltip-count">{data.count}</span>
+            </div>
+            <div className="tooltip-stat">
+              <span>Percentage:</span>
+              <span className="tooltip-percentage">{data.percentage}%</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
   if (!distribution || Object.keys(distribution).length === 0) {
     return (
       <div className="no-distribution-data">
@@ -112,6 +140,7 @@ export function RatingDistributionChart({ distribution }) {
             tickLine={false}
             width={100}
           />
+          <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="percentage" radius={[0, 4, 4, 0]} isAnimationActive={false}>
             {chartData.map((entry, index) => {
               const color = getBarColor(entry.numeric, entry.label)

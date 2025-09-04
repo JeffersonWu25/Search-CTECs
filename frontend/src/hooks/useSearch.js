@@ -1,10 +1,14 @@
+/*
+This is the hook handles the data retreival for the homepage search for courses and instructors.
+*/
+
 import { useState, useEffect, useCallback } from 'react'
 import { searchCourses, searchInstructors } from '../services/search'
 import { useNavigate } from 'react-router-dom'
 
 export function useSearch() {
   const [query, setQuery] = useState('') // search bar input
-  const [results, setResults] = useState([]) // 
+  const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const navigate = useNavigate()
