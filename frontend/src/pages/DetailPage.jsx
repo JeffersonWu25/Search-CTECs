@@ -133,7 +133,7 @@ export function DetailPage() {
             <div className="detail-page">
                 {/* Header Section */}
                 <div className="detail-header">
-                    <div className="header-navigation">
+                    <div className="detail-header-navigation">
                         <button onClick={handleBackToSearch} className='back-btn'>
                             <svg className="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -142,26 +142,37 @@ export function DetailPage() {
                         </button>
                     </div>
                     
-                    <div className="header-content">
-                        <div className="course-title-section">
-                            <h1 className="course-title">{offering.course?.title || "Unknown Course"}</h1>
-                            <div className="course-meta">
-                                <span className="course-code">{offering.course?.code || 'N/A'}</span>
-                                <span className="course-instructor">with {offering.instructor?.name || 'N/A'}</span>
+                    <div className="detail-header-content">
+                        <div className="detail-course-title-section">
+                            <h1 className="detail-course-title">{offering.course?.title || "Unknown Course"}</h1>
+                            <div className="detail-course-meta">
+                                <span className="detail-course-code">{offering.course?.code || 'N/A'}</span>
+                                <span className="detail-course-instructor">
+                                    with {offering.instructor?.id ? (
+                                        <button 
+                                            className="instructor-link"
+                                            onClick={() => navigate(`/instructor/${offering.instructor.id}`)}
+                                        >
+                                            {offering.instructor.name}
+                                        </button>
+                                    ) : (
+                                        offering.instructor?.name || 'N/A'
+                                    )}
+                                </span>
                             </div>
                         </div>
                         
-                        <div className="header-badges">
-                            <div className="badge-group">
-                                <span className="badge school-badge">
-                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <div className="detail-header-badges">
+                            <div className="detail-badge-group">
+                                <span className="detail-badge detail-school-badge">
+                                    <svg className="detail-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                                     </svg>
                                     {offering.course?.school || 'N/A'}
                                 </span>
-                                <span className="badge term-badge">
-                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <span className="detail-badge detail-term-badge">
+                                    <svg className="detail-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                                         <line x1="16" y1="2" x2="16" y2="6"/>
                                         <line x1="8" y1="2" x2="8" y2="6"/>
@@ -169,8 +180,8 @@ export function DetailPage() {
                                     </svg>
                                     {offering.quarter} {offering.year}
                                 </span>
-                                <span className="badge section-badge">
-                                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <span className="detail-badge detail-section-badge">
+                                    <svg className="detail-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                                         <circle cx="9" cy="7" r="4"/>
                                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -186,14 +197,25 @@ export function DetailPage() {
                 {/* Main Content Grid */}
                 <div className="detail-content">
                     {/* Left Column - Course Info & Requirements */}
-                    <div className="left-column">
+                    <div className="detail-left-column">
                         {/* Course Information Card */}
                         <div className="info-card">
                             <h3>📚 Course Information</h3>
                             <div className="info-grid">
                                 <div className="info-item">
                                     <span className="info-label">Instructor</span>
-                                    <span className="info-value">{offering.instructor?.name || 'N/A'}</span>
+                                    <span className="info-value">
+                                        {offering.instructor?.id ? (
+                                            <button 
+                                                className="instructor-link"
+                                                onClick={() => navigate(`/instructor/${offering.instructor.id}`)}
+                                            >
+                                                {offering.instructor.name}
+                                            </button>
+                                        ) : (
+                                            offering.instructor?.name || 'N/A'
+                                        )}
+                                    </span>
                                 </div>
                                 <div className="info-item">
                                     <span className="info-label">School</span>
@@ -254,7 +276,7 @@ export function DetailPage() {
                     </div>
 
                     {/* Right Column - Survey Responses */}
-                    <div className="right-column">
+                    <div className="detail-right-column">
 
                         {/* Rating Summary Card */}
                         {offering.survey_responses && offering.survey_responses.length > 0 && (
@@ -311,7 +333,7 @@ export function DetailPage() {
                         {/* Survey Responses Card */}
                         {offering.survey_responses && offering.survey_responses.length > 0 ? (
                             <div className="reviews-section">
-                                <div className="section-header">
+                                <div className="ctec-section-header">
                                     <h3>📊 CTEC Survey Results</h3>
                                     <span className="response-count">{offering.survey_responses.length} questions</span>
                                 </div>

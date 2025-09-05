@@ -210,6 +210,83 @@ def generate_ai_summary(comments: List[str]) -> str:
     response = model.generate_content(query)
     return response.text
 
+def create_or_update_instructor_summary(instructor_id: str, course_ai_summary: str) -> str:
+    """
+    Create an ai summary for an instructor or update the existing one.
+
+    Args:
+        instructor_id: The database ID of the instructor.
+        course_ai_summary: The AI summary of a specific course offering.
+
+    Returns:
+        str: The generated instructor summary.
+    """
+    all_summaries = []
+
+    try:
+        response = supabase.table("course_offerings").select(
+            "ai_summary"
+        ).eq("instructor_id", instructor_id).execute()
+        if response.data:
+            for summary in response.data:
+                # Filter out None/empty summaries
+                if summary["ai_summary"] and summary["ai_summary"].strip():
+                    all_summaries.append(summary["ai_summary"])
+    except Exception as e:
+        print(f"Error getting course offerings for instructor {instructor_id}: {e}")
+        raise
+
+    # Add the new course summary if it's not None/empty
+    if course_ai_summary and course_ai_summary.strip():
+        all_summaries.append(course_ai_summary)
+
+    # Handle the case where there are no reviews
+    if not all_summaries:
+        instructor_summary = "No reviews provided."
+    else:
+        # Join all summaries into a single string
+        reviews_text = "\n\n".join(all_summaries)
+
+        query = f"""
+        You will write a plain-text summary of an instructor's teaching style
+        based off of aggregated reviews of all of their course offerings.
+        These reviews may contain both course-level and instructor-level remarks.
+
+        BEFORE YOU WRITE:
+        - Consider only statements about the instructor themselves, not the course.
+
+        TASK:
+        - If there are no reviews, return exactly: "No reviews provided."
+        - Otherwise, write a clear, concise summary that must be no longer than 125 words.
+        - everything should be in one paragraph.
+
+        CONTENT TO PRESENT:
+        - only talk about information that explicilty pertains to the instructor not the course.
+        - Things that the instructor does well
+        - Things that students disliked about the instructor
+        - Focus on these instructor traits when present: clarity/organization, engagement/enthusiasm, 
+          approachability/support & responsiveness, feedback quality & grading transparency, pacing choices, 
+          inclusivity/class environment, use of examples/demos, TA/mentor coordination.
+
+
+        RULES:
+        - Use only information explicitly found in the reviews.
+        - Do not speculate or add details not present.
+        - Keep the style neutral, professional, and helpful for students deciding on the course.
+        - Output should be plain text, no bullet points.
+
+        Here are the reviews:
+        {reviews_text}
+        """
+
+        response = model.generate_content(query)
+        instructor_summary = response.text
+
+    supabase.table("instructors").update(
+        {"ai_instructor_summary": instructor_summary}
+    ).eq("id", instructor_id).execute()
+    return instructor_summary
+
 def upload_ctec(pdf_path: str) -> Dict[str, Any]:
     """
     Main function to parse one CTEC PDF and upload all data to Supabase.
@@ -234,6 +311,9 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
         # Create records in correct order (following foreign key relationships)
         course_id = get_or_insert_course(extracted_data["code"], extracted_data["title"], extracted_data["school"])
         instructor_id = get_or_insert_instructor(extracted_data["instructor"])
+
+        # Update the AI summary of the instructor based on all of their course offerings
+        create_or_update_instructor_summary(instructor_id, ai_summary)
 
         offering_id = create_course_offering(course_id, instructor_id, extracted_data["quarter"],
                                              extracted_data["year"], extracted_data["audience_size"],
@@ -265,7 +345,7 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
 if __name__ == "__main__":
     # Example usage
     try:
-        for i in range(11, 18):
+        for i in range(11, 12):
             result = upload_ctec(f"backend/data/test{i}.pdf")
             print(f"Successfully uploaded CTEC {i}!")
             print("Created records:", result)

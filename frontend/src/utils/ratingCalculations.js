@@ -144,3 +144,73 @@ export const processSurveyResponses = (surveyResponses) => {
     time_survey: time_survey
   }
 }
+
+/**
+ * Calculates average ratings for a professor across all their course offerings
+ * @param {Object} professorData - Professor data object with course_offerings array
+ * @returns {Object} Object with average ratings for all metrics
+ */
+export const calculateProfessorAverages = (professorData) => {
+  // Early return for invalid data
+  if (!professorData?.course_offerings?.length) {
+    return {
+      rating_of_instruction: 0,
+      rating_of_course: 0,
+      estimated_learning: 0,
+      intellectual_challenge: 0,
+      stimulating_instructor: 0,
+      time_survey: 0
+    }
+  }
+
+  // Define rating types for cleaner iteration
+  const RATING_TYPES = [
+    'rating_of_instruction',
+    'rating_of_course', 
+    'estimated_learning',
+    'intellectual_challenge',
+    'stimulating_instructor'
+  ]
+
+  // Initialize accumulators
+  const numericAccumulators = RATING_TYPES.reduce((acc, type) => {
+    acc[type] = { total: 0, count: 0 }
+    return acc
+  }, {})
+
+  const timeSurveyCounts = {}
+
+  // Process each course offering efficiently
+  for (const offering of professorData.course_offerings) {
+    if (!offering.survey_responses?.length) continue
+
+    const offeringRatings = processSurveyResponses(offering.survey_responses)
+
+    // Accumulate numeric ratings
+    for (const ratingType of RATING_TYPES) {
+      const value = offeringRatings[ratingType]
+      if (value > 0) {
+        numericAccumulators[ratingType].total += value
+        numericAccumulators[ratingType].count++
+      }
+    }
+
+    // Handle time_survey separately (mode calculation)
+    const timeValue = offeringRatings.time_survey
+    if (timeValue && timeValue !== 0) {
+      timeSurveyCounts[timeValue] = (timeSurveyCounts[timeValue] || 0) + 1
+    }
+  }
+
+  // Calculate final averages efficiently
+  const averages = RATING_TYPES.reduce((acc, type) => {
+    const { total, count } = numericAccumulators[type]
+    acc[type] = count > 0 ? Math.round((total / count) * 10) / 10 : 0
+    return acc
+  }, {})
+
+  // Add time_survey mode
+  averages.time_survey = calculateMode(timeSurveyCounts) || 0
+
+  return averages
+}

@@ -62,7 +62,7 @@ class Comment(BaseModel):
 class Offering(BaseModel):
     id: uuid.UUID
     course: Course
-    instructor: Instructor
+    instructor: Optional[Instructor] = None # optional for profile
     quarter: str
     year: int
     audience_size: Optional[int] = None
@@ -71,6 +71,13 @@ class Offering(BaseModel):
     survey_responses: List[SurveyResponse]
     comments: Optional[List[Comment]] = None # optional to reduce transfer size
     ai_summary: Optional[str] = None
+
+class InstructorProfile(BaseModel):
+    id: uuid.UUID
+    name: str
+    profile_photo_url: Optional[str] = None
+    ai_instructor_summary: Optional[str] = None
+    course_offerings: List[Offering]
 
 # --- Helper functions ---
 
@@ -273,5 +280,64 @@ async def search_offerings(
         else:
             print(f"No matching offerings found for query: {query}")
             return []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@app.get("/instructors/{instructor_id}/profile", response_model=InstructorProfile)
+async def get_instructor_profile(instructor_id: str):
+    """
+    Returns the profile for a specific instructor. including all of their course offerings and that data
+
+    args:
+        instructor_id: str that represents the instructor's id
+
+    returns:
+        {
+            "id": uuid.UUID,
+            "name": str,
+            "course_offerings": List[Offering]
+        }
+    """
+    try:
+        response = supabase.from_('instructors').select(
+            "id,name,profile_photo_url, ai_instructor_summary,"
+            "course_offerings:course_offerings("
+                "id,quarter,year,audience_size,response_count,section,"
+                "course:courses("
+                    "id,code,title,school,"
+                    "requirements:course_requirements("
+                        "requirement:requirements(id,name)"
+                    ")"
+                "),"
+                "survey_responses(id,distribution,survey_question),"
+                "comments(id,content)"
+            ")"
+        ).eq('id', instructor_id).execute()
+        print(response.data)
+
+        offerings = []
+
+        if response.data:
+            for row in response.data[0]['course_offerings']:
+                course_data = unwrap_requirements(row["course"])
+                offerings.append(Offering(
+                    id=row['id'],
+                    quarter=row['quarter'],
+                    year=row['year'],
+                    section=row['section'],
+                    course=Course(**course_data),
+                    survey_responses=[SurveyResponse(**sr) for sr in row['survey_responses']],
+                ))
+
+            instructor = InstructorProfile(
+                id=response.data[0]['id'],
+                name=response.data[0]['name'],
+                profile_photo_url=response.data[0]['profile_photo_url'],
+                ai_instructor_summary=response.data[0]['ai_instructor_summary'],
+                course_offerings=offerings,
+            )
+            return instructor
+        else:
+            raise HTTPException(status_code=404, detail="Instructor not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
