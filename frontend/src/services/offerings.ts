@@ -34,6 +34,9 @@ export async function searchOfferings(filters: SearchOfferingsFilters = {}) {
       ),
       instructor:instructors!inner (
         id, name
+      ),
+      survey_responses(
+        id, survey_question, distribution
       )
     `, { count: 'exact' }) // returns { data, error, count }
 

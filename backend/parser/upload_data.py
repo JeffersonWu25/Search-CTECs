@@ -265,7 +265,7 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
 if __name__ == "__main__":
     # Example usage
     try:
-        for i in range(2, 11):
+        for i in range(11, 18):
             result = upload_ctec(f"backend/data/test{i}.pdf")
             print(f"Successfully uploaded CTEC {i}!")
             print("Created records:", result)

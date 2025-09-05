@@ -566,6 +566,77 @@
   gap: 0.5rem;
 }
 
+/* ========================================== Rating Summary Card ========================================== */
+.rating-summary-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.rating-summary-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rating-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.summary-rating {
+  text-align: center;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-rating-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.summary-rating-score {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+
+/* Rating color classes for summary */
+.summary-rating-score.rating-excellent {
+  color: #059669; /* Green for 5.5-6 */
+}
+
+.summary-rating-score.rating-good {
+  color: #0d9488; /* Teal for 5.0-5.4 */
+}
+
+.summary-rating-score.rating-average {
+  color: #d97706; /* Orange for 4.5-4.9 */
+}
+
+.summary-rating-score.rating-poor {
+  color: #dc2626; /* Red for 4.0-4.4 */
+}
+
+.summary-rating-score.rating-very-poor {
+  color: #991b1b; /* Dark red for below 4.0 */
+}
+
 .info-grid {
   display: grid;
   gap: 1rem;
@@ -791,6 +862,19 @@
   .info-card, .right-column {
     padding: 1.25rem;
   }
+  
+  .rating-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .summary-rating {
+    padding: 0.75rem;
+  }
+  
+  .summary-rating-score {
+    font-size: 1.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -815,6 +899,19 @@
   
   .badge {
     justify-content: flex-start;
+  }
+  
+  .rating-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .summary-rating {
+    padding: 0.5rem;
+  }
+  
+  .summary-rating-score {
+    font-size: 1.25rem;
   }
 }
 

@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { searchOfferings } from '../../services/offerings'
-import { useNavigate } from 'react-router-dom'
+import { OfferingCard } from './OfferingCard'
 import './Search.css'
 
 export function SearchResults({ selectedCourses, selectedInstructors, selectedRequirements }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -108,56 +107,25 @@ export function SearchResults({ selectedCourses, selectedInstructors, selectedRe
     )
   }
 
-  const handleResultClick = (offering) => {
-    // Preserve current search state in URL when navigating to detail page
-    const currentParams = new URLSearchParams(window.location.search)
-    const searchState = {
-      selectedCourses,
-      selectedInstructors,
-      selectedRequirements
-    }
-    
-    // Add search state to URL parameters
-    currentParams.set('searchState', encodeURIComponent(JSON.stringify(searchState)))
-    navigate(`/offering/${offering.id}?${currentParams.toString()}`)
-  }
 
   return (
     <div className="search-results-container">
-      <div className="results-header">
+      <div className="search-results-header">
         <h3>Search Results ({results.length})</h3>
         <p>
           Showing CTEC reviews for {selectedCourses.length} course(s), {selectedInstructors.length} instructor(s)
           {selectedRequirements.length > 0 && `, ${selectedRequirements.length} requirement(s)`}
         </p>
       </div>
-      <div className="results-list">
+      <div className="search-results-list">
         {results.map((offering) => (
-          <div key={offering.id}
-               className="result-card"
-               onClick={() => handleResultClick(offering)}
-               style={{ cursor: 'pointer' }}
-          >
-            <div className="result-card-header">
-              <h4>{offering.course?.title || 'Unknown Course'}</h4>
-              <span className="course-code">
-                {offering.course?.code || 'N/A'}
-              </span>
-            </div>
-            <div className="result-card-content">
-              <div className="offering-info">
-                <div className="instructor-info">
-                  <strong>Instructor:</strong> {offering.instructor?.name || 'Unknown'}
-                </div>
-                <div className="term-info">
-                  <strong>Term:</strong> {offering.quarter} {offering.year}
-                </div>
-              </div>
-            </div>
-            <div className="result-card-footer">
-              <span className="click-hint">Click to view details →</span>
-            </div>
-          </div>
+          <OfferingCard
+            key={offering.id}
+            offering={offering}
+            selectedCourses={selectedCourses}
+            selectedInstructors={selectedInstructors}
+            selectedRequirements={selectedRequirements}
+          />
         ))}
       </div>
     </div>

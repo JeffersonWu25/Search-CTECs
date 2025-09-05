@@ -2,6 +2,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout'
 import { RatingDistributionChart } from '../components/common/RatingDistributionChart'
+import { 
+  processSurveyResponses, 
+  getRatingColorClass 
+} from '../utils/ratingCalculations'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -246,10 +250,65 @@ export function DetailPage() {
                                 </div>
                             </div>
                         )}
+
                     </div>
 
                     {/* Right Column - Survey Responses */}
                     <div className="right-column">
+
+                        {/* Rating Summary Card */}
+                        {offering.survey_responses && offering.survey_responses.length > 0 && (
+                            <div className="rating-summary-card">
+                                <h3>📈 Rating Summary</h3>
+                                <div className="rating-summary-grid">
+                                    {(() => {
+                                        const ratings = processSurveyResponses(offering.survey_responses)
+                                        return (
+                                            <>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Overall Rating</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.rating_of_course)}`}>
+                                                        {ratings.rating_of_course > 0 ? `${ratings.rating_of_course}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Rating of Instruction</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.rating_of_instruction)}`}>
+                                                        {ratings.rating_of_instruction > 0 ? `${ratings.rating_of_instruction}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Estimated Learning</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.estimated_learning)}`}>
+                                                        {ratings.estimated_learning > 0 ? `${ratings.estimated_learning}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Intellectual Challenge</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.intellectual_challenge)}`}>
+                                                        {ratings.intellectual_challenge > 0 ? `${ratings.intellectual_challenge}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Stimulating Instructor</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.stimulating_instructor)}`}>
+                                                        {ratings.stimulating_instructor > 0 ? `${ratings.stimulating_instructor}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">Hours/Week</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.time_survey)}`}>
+                                                        {ratings.time_survey || '—'}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )
+                                    })()}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Survey Responses Card */}
                         {offering.survey_responses && offering.survey_responses.length > 0 ? (
                             <div className="reviews-section">
                                 <div className="section-header">
