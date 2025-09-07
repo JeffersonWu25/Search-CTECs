@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { useRef } from 'react'
+import { calculateAverageRating } from '../../utils/ratingCalculations'
 
 export function RatingDistributionChart({ distribution }) {
   // Persistent dynamic color generation using refs
@@ -44,10 +45,35 @@ export function RatingDistributionChart({ distribution }) {
     return generatedColors[label]
   }
 
+  // Helper function to get sort order for different label types
+  const getSortOrder = (label) => {
+    // Handle simple numeric ratings (1-6)
+    const numeric = parseInt(label)
+    if (!isNaN(numeric) && label.trim() === numeric.toString()) {
+      return numeric
+    }
+    
+    // Handle hours per week ranges
+    const hourRanges = {
+      '3 or fewer': 1,
+      '4 - 7': 2,
+      '8 - 11': 3,
+      '12 - 15': 5,
+      '16 - 19': 6,
+      '20 or more': 7,
+    }
+    
+    if (hourRanges[label] !== undefined) {
+      return hourRanges[label] + 100 // Offset to sort after numeric ratings
+    }
+    
+    // Default alphabetical sort for other labels
+    return 1000 + label.charCodeAt(0)
+  }
+
   // Normalize and sort chart data
   const chartData = Object.entries(distribution || {})
     .map(([label, count]) => {
-      // Check if the label is a simple number (not a range or descriptive text)
       const numeric = parseInt(label)
       const isNumeric = !isNaN(numeric) && label.trim() === numeric.toString()
       return {
@@ -55,22 +81,14 @@ export function RatingDistributionChart({ distribution }) {
         numeric: isNumeric ? numeric : null,
         count,
         percentage: 0,
+        sortOrder: getSortOrder(label)
       }
     })
-    .sort((a, b) => {
-      if (a.numeric !== null && b.numeric !== null) {
-        return a.numeric - b.numeric
-      } else if (a.numeric !== null) {
-        return -1
-      } else if (b.numeric !== null) {
-        return 1
-      } else {
-        return a.label.localeCompare(b.label)
-      }
-    })
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 
   // Compute totals and percentages
   const totalResponses = chartData.reduce((sum, item) => sum + item.count, 0)
+  const averageRating = calculateAverageRating(distribution)
 
   chartData.forEach((item) => {
     item.percentage =
@@ -115,8 +133,12 @@ export function RatingDistributionChart({ distribution }) {
   return (
     <div className="rating-distribution-chart">
       <div className="chart-header">
-        <h4>Rating Distribution</h4>
-        <p className="total-responses">Total: {totalResponses} responses</p>
+        <div className="chart-stats">
+          <p className="total-responses">Total: {totalResponses} responses</p>
+          {averageRating > 0 && (
+            <p className="average-rating">Average: {averageRating.toFixed(1)}/6</p>
+          )}
+        </div>
       </div>
 
       <ResponsiveContainer width="100%" height={Math.max(45 * chartData.length, 200)}>

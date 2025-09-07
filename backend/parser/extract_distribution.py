@@ -12,7 +12,7 @@ from PIL import Image
 import pytesseract
 from pdf2image import convert_from_path
 
-def get_distribution_for_one_question(text: str) -> dict:
+def get_distribution_for_one_question(text: str, file_identifier: str = "") -> dict:
     """
     Given the raw OCR text for a singular question, 
     extract the distribution, response count, and mean score.
@@ -31,9 +31,26 @@ def get_distribution_for_one_question(text: str) -> dict:
     # Build distribution (sparse: only bins we actually saw)
     distribution = {int(k): int(v) for k, v in pairs}
 
+    # check if the extracted total matches the ocr total
+    total_pattern = re.compile(r"(?i)(?:total|\[?\s*total\s*\]?)\s*\((\d+)\)", re.IGNORECASE)
+    total_match = total_pattern.search(text)
+
+    if total_match:
+        ocr_total = int(total_match.group(1))
+        calculated_total = sum(distribution.values())
+
+        if ocr_total != calculated_total:
+            file_info = f" [{file_identifier}]" if file_identifier else ""
+            print(f"⚠️  OCR VALIDATION WARNING{file_info}: Total mismatch detected!")
+            print(f"   OCR reported total: {ocr_total}")
+            print(f"   Calculated total: {calculated_total}")
+            print(f"   Distribution: {distribution}")
+            print(f"   Missing values: {ocr_total - calculated_total} responses")
+            print()
+
     return distribution
 
-def get_distributions_for_first_5_survey_questions(text: str) -> list:
+def get_distributions_for_first_5_survey_questions(text: str, file_identifier: str = "") -> list:
     """
     Extract distributions for the first 5 survey questions from the text.
     Returns a list of dictionaries, one per question.
@@ -64,13 +81,13 @@ def get_distributions_for_first_5_survey_questions(text: str) -> list:
         match = re.search(pattern, text, flags=re.S)
         if match:
             block = match.group(0)
-            results[question] = get_distribution_for_one_question(block)
+            results[question] = get_distribution_for_one_question(block, file_identifier)
 
     return results
 
 def get_ocr_text_from_one_page(page_img: Image.Image) -> str:
     """
-    Extracts the OCR text from a full page image.
+    Extracts the OCR text from a full page image using the optimal approach.
 
     Args:
         page_img: a full page image
@@ -78,9 +95,11 @@ def get_ocr_text_from_one_page(page_img: Image.Image) -> str:
     Returns:
         the OCR text from the page
     """
-    # Convert to grayscale for better OCR
-    gray_page = page_img.convert("L")
-    return pytesseract.image_to_string(gray_page)
+    # Extract red channel (clearest for black text)
+    red_channel = page_img.split()[0] if len(page_img.split()) >= 3 else page_img.convert("L")
+
+    # Use PSM 3 (automatic) - the winning combination
+    return pytesseract.image_to_string(red_channel, config=r'--oem 3 --psm 3')
 
 def extract_distributions_from_pdf(pdf_path: str) -> dict:
     """
@@ -98,17 +117,20 @@ def extract_distributions_from_pdf(pdf_path: str) -> dict:
             "stimulating_instructor": {distribution: {}},
         }
     """
-    # Convert only pages 2 and 3 to images (0-indexed: pages 1 and 2)
-    pages = convert_from_path(pdf_path, dpi=300)
-    pages = pages[1:3]
+    try:
+        # Convert only pages 2 and 3 to images (0-indexed: pages 1 and 2)
+        pages = convert_from_path(pdf_path, dpi=300)
+        pages = pages[1:3]
 
-    full_ocr_text = ""
+        full_ocr_text = ""
 
-    for i, page_img in enumerate(pages):
-        print(f"\nProcessing Page {i + 1}")
-        try:
-            full_ocr_text += get_ocr_text_from_one_page(page_img)
-        except Exception as e:
-            print(f"Failed on page {i + 1}: {e}")
+        for i, page_img in enumerate(pages):
+            try:
+                full_ocr_text += get_ocr_text_from_one_page(page_img)
+            except Exception as e:
+                raise Exception(f"OCR failed on page {i + 1}: {e}")
 
-    return get_distributions_for_first_5_survey_questions(full_ocr_text)
+        return get_distributions_for_first_5_survey_questions(full_ocr_text, pdf_path)
+
+    except Exception as e:
+        raise Exception(f"Failed to extract distributions from {pdf_path}: {e}")

@@ -946,9 +946,22 @@
   margin-bottom: 0.5rem;
 }
 
+.chart-stats {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .total-responses {
   font-size: 0.9rem;
   color: #6b7280;
+}
+
+.average-rating {
+  font-size: 1.1 rem;
+  color: #059669;
+  font-weight: 600;
 }
 
 .chart-legend {

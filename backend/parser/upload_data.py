@@ -298,17 +298,42 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
     Returns:
         the database ID of the course offering. 
     """
+    print(f"\n{'='*60}")
+    print(f"PROCESSING: {pdf_path}")
+    print(f"{'='*60}")
+
     try:
         # Extract data from PDF
+        print("📄 Extracting data from PDF...")
         extracted_data = extract_all_info(pdf_path)
 
         if not extracted_data:
             raise ValueError(f"No data extracted from {pdf_path}")
 
+        # Print extracted data (excluding comments)
+        print("✅ Data extracted successfully!")
+        print(f"   Course: {extracted_data['code']} - {extracted_data['title']}")
+        print(f"   Instructor: {extracted_data['instructor']}")
+        print(f"   Term: {extracted_data['quarter']} {extracted_data['year']}")
+        print(f"   Section: {extracted_data['section']}")
+        print(f"   Response Count: {extracted_data['response_count']}")
+        print(f"   Comments: {len(extracted_data['comments'])} comments")
+
+        # Print survey response summary
+        print("   Survey Responses:")
+        for question, distribution in extracted_data["survey_responses"].items():
+            if isinstance(distribution, dict) and distribution:
+                total_responses = sum(distribution.values())
+                print(f"     {question}: {total_responses} total responses")
+            else:
+                print(f"     {question}: {len(distribution) if isinstance(distribution, dict) else 'N/A'} responses")
+
         # Generate AI summary of the comments
+        print("🤖 Generating AI summary...")
         ai_summary = generate_ai_summary(extracted_data["comments"])
 
         # Create records in correct order (following foreign key relationships)
+        print("💾 Uploading to database...")
         course_id = get_or_insert_course(extracted_data["code"], extracted_data["title"], extracted_data["school"])
         instructor_id = get_or_insert_instructor(extracted_data["instructor"])
 
@@ -330,24 +355,85 @@ def upload_ctec(pdf_path: str) -> Dict[str, Any]:
         # upload comments
         create_comments(offering_id, extracted_data["comments"])
 
-        print(f"Successfully uploaded the following CTEC data: {extracted_data}")
+        print("✅ Successfully uploaded to database!")
+        print(f"   Course ID: {course_id}")
+        print(f"   Instructor ID: {instructor_id}")
+        print(f"   Offering ID: {offering_id}")
+
+        return {
+            "course_id": course_id,
+            "instructor_id": instructor_id,
+            "offering_id": offering_id,
+            "success": True
+        }
 
     except Exception as e:
-        print(f"Error uploading CTEC data: {e}")
-        raise
+        print(f"❌ ERROR: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "file": pdf_path
+        }
 
+def process_multiple_ctecs(pdf_paths: list) -> Dict[str, Any]:
+    """
+    Process multiple CTEC PDFs and provide comprehensive reporting.
+    
+    Args:
+        pdf_paths: List of PDF file paths to process
+        
+    Returns:
+        Dictionary with success/failure summary
+    """
+    print(f"\n🚀 STARTING BATCH PROCESSING OF {len(pdf_paths)} CTEC FILES")
+    print(f"{'='*80}")
+
+    successful_uploads = []
+    failed_uploads = []
+
+    for i, pdf_path in enumerate(pdf_paths, 1):
+        print(f"\n📁 File {i}/{len(pdf_paths)}")
+        result = upload_ctec(pdf_path)
+
+        if result.get("success", False):
+            successful_uploads.append({
+                "file": pdf_path,
+                "course_id": result.get("course_id"),
+                "instructor_id": result.get("instructor_id"),
+                "offering_id": result.get("offering_id")
+            })
+        else:
+            failed_uploads.append({
+                "file": pdf_path,
+                "error": result.get("error", "Unknown error")
+            })
+
+    # Print final summary
+    print(f"\n{'='*80}")
+    print("📊 BATCH PROCESSING SUMMARY")
+    print(f"{'='*80}")
+    print(f"✅ Successful uploads: {len(successful_uploads)}")
+    print(f"❌ Failed uploads: {len(failed_uploads)}")
+
+    if successful_uploads:
+        print("\n🎉 SUCCESSFUL FILES:")
+        for upload in successful_uploads:
+            print(f"   ✅ {upload['file']} (Offering ID: {upload['offering_id']})")
+
+    if failed_uploads:
+        print("\n💥 FAILED FILES:")
+        for failure in failed_uploads:
+            print(f"   ❌ {failure['file']}: {failure['error']}")
+
+    print(f"\n{'='*80}")
     return {
-        "course_id": course_id,
-        "instructor_id": instructor_id,
-        "offering_id": offering_id
+        "successful": successful_uploads,
+        "failed": failed_uploads,
+        "total_processed": len(pdf_paths),
+        "success_rate": len(successful_uploads) / len(pdf_paths) * 100
     }
 
 if __name__ == "__main__":
-    # Example usage
-    try:
-        for i in range(11, 12):
-            result = upload_ctec(f"backend/data/test{i}.pdf")
-            print(f"Successfully uploaded CTEC {i}!")
-            print("Created records:", result)
-    except Exception as e:
-        print(f"Failed to upload CTEC: {e}")
+    # Example usage - process multiple files
+    pdf_files = [f"backend/data/test{i}.pdf" for i in range(1, 18)]
+    results = process_multiple_ctecs(pdf_files)

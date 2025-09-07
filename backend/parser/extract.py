@@ -376,27 +376,51 @@ def extract_all_info(pdf_path: str) -> dict:
         }
     }   
     """
-    raw_text = extract_text_from_pdf(pdf_path)
-    pdf_text = clean_text(raw_text)
-    course_info = extract_code_title_instructor(pdf_text)
-    term_info = extract_quarter_and_year(pdf_text)
-    questions_1_5 = extract_distributions_from_pdf(pdf_path)
-    comments = extract_comments(raw_text)
-    questions_6_10 = extract_demographics(pdf_text)
-    question_11 = extract_time_survey(pdf_text)
+    try:
+        # Extract text from PDF
+        raw_text = extract_text_from_pdf(pdf_path)
+        if not raw_text:
+            raise ValueError(f"Could not extract text from {pdf_path}")
 
-    survey_responses = questions_1_5 | questions_6_10 | question_11
+        pdf_text = clean_text(raw_text)
+        if not pdf_text:
+            raise ValueError(f"PDF text is empty after cleaning for {pdf_path}")
 
-    return {
-        "code": course_info['code'],
-        "title": course_info['title'],
-        "section": course_info['section'],
-        "school": course_info['school'] if 'school' in course_info else None,
-        "instructor": course_info['instructor'],
-        "audience_size": course_info['audience_size'] if 'audience_size' in course_info else None,
-        "response_count": course_info['response_count'] if 'response_count' in course_info else None,
-        "quarter": term_info['quarter'],
-        "year": term_info['year'],
-        "comments": comments,
-        "survey_responses": survey_responses
-    }
+        # Extract course information
+        course_info = extract_code_title_instructor(pdf_text)
+        if not course_info:
+            raise ValueError(f"Could not extract course information from {pdf_path}")
+
+        # Extract term information
+        term_info = extract_quarter_and_year(pdf_text)
+        if not term_info:
+            raise ValueError(f"Could not extract term information from {pdf_path}")
+
+        # Extract survey responses (questions 1-5)
+        questions_1_5 = extract_distributions_from_pdf(pdf_path)
+        if not questions_1_5:
+            raise ValueError(f"Could not extract survey distributions from {pdf_path}")
+
+        # Extract other information
+        comments = extract_comments(raw_text)
+        questions_6_10 = extract_demographics(pdf_text)
+        question_11 = extract_time_survey(pdf_text)
+
+        survey_responses = questions_1_5 | questions_6_10 | question_11
+
+        return {
+            "code": course_info['code'],
+            "title": course_info['title'],
+            "section": course_info['section'],
+            "school": course_info['school'] if 'school' in course_info else None,
+            "instructor": course_info['instructor'],
+            "audience_size": course_info['audience_size'] if 'audience_size' in course_info else None,
+            "response_count": course_info['response_count'] if 'response_count' in course_info else None,
+            "quarter": term_info['quarter'],
+            "year": term_info['year'],
+            "comments": comments,
+            "survey_responses": survey_responses
+        }
+
+    except Exception as e:
+        raise Exception(f"Failed to extract all information from {pdf_path}: {e}")

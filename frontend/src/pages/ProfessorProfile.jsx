@@ -6,6 +6,7 @@ import {
   getRatingColorClass,
   calculateProfessorAverages
 } from '../utils/ratingCalculations'
+import { getShortLabel } from '../utils/questionMapping'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -149,31 +150,31 @@ export function ProfessorProfile() {
                   </div>
                 </div>
                 <div className="summary-rating">
-                  <div className="summary-rating-label">Rating of Instruction</div>
-                  <div className={`summary-rating-score ${getRatingColorClass(overallRatings.rating_of_instruction)}`}>
-                    {overallRatings.rating_of_instruction > 0 ? `${overallRatings.rating_of_instruction}/6` : '—'}
+                  <div className="summary-rating-label">{getShortLabel('rating_of_course')}</div>
+                  <div className={`summary-rating-score ${getRatingColorClass(overallRatings.rating_of_course)}`}>
+                    {overallRatings.rating_of_course > 0 ? `${overallRatings.rating_of_course}/6` : '—'}
                   </div>
                 </div>
                 <div className="summary-rating">
-                  <div className="summary-rating-label">Estimated Learning</div>
+                  <div className="summary-rating-label">{getShortLabel('estimated_learning')}</div>
                   <div className={`summary-rating-score ${getRatingColorClass(overallRatings.estimated_learning)}`}>
                     {overallRatings.estimated_learning > 0 ? `${overallRatings.estimated_learning}/6` : '—'}
                   </div>
                 </div>
                 <div className="summary-rating">
-                  <div className="summary-rating-label">Intellectual Challenge</div>
+                  <div className="summary-rating-label">{getShortLabel('intellectual_challenge')}</div>
                   <div className={`summary-rating-score ${getRatingColorClass(overallRatings.intellectual_challenge)}`}>
                     {overallRatings.intellectual_challenge > 0 ? `${overallRatings.intellectual_challenge}/6` : '—'}
                   </div>
                 </div>
                 <div className="summary-rating">
-                  <div className="summary-rating-label">Stimulating Instructor</div>
+                  <div className="summary-rating-label">{getShortLabel('stimulating_instructor')}</div>
                   <div className={`summary-rating-score ${getRatingColorClass(overallRatings.stimulating_instructor)}`}>
                     {overallRatings.stimulating_instructor > 0 ? `${overallRatings.stimulating_instructor}/6` : '—'}
                   </div>
                 </div>
                 <div className="summary-rating">
-                  <div className="summary-rating-label">Hours/Week</div>
+                  <div className="summary-rating-label">{getShortLabel('time_survey')}</div>
                   <div className={`summary-rating-score ${getRatingColorClass(overallRatings.time_survey)}`}>
                     {overallRatings.time_survey || '—'}
                   </div>

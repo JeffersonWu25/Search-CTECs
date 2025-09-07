@@ -6,6 +6,11 @@ import {
   processSurveyResponses, 
   getRatingColorClass 
 } from '../utils/ratingCalculations'
+import { 
+  getFullQuestion, 
+  getShortLabel, 
+  sortSurveyResponsesByOrder 
+} from '../utils/questionMapping'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -288,37 +293,37 @@ export function DetailPage() {
                                         return (
                                             <>
                                                 <div className="summary-rating">
-                                                    <div className="summary-rating-label">Overall Rating</div>
-                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.rating_of_course)}`}>
-                                                        {ratings.rating_of_course > 0 ? `${ratings.rating_of_course}/6` : '—'}
-                                                    </div>
-                                                </div>
-                                                <div className="summary-rating">
-                                                    <div className="summary-rating-label">Rating of Instruction</div>
+                                                    <div className="summary-rating-label">{getShortLabel('rating_of_instruction')}</div>
                                                     <div className={`summary-rating-score ${getRatingColorClass(ratings.rating_of_instruction)}`}>
                                                         {ratings.rating_of_instruction > 0 ? `${ratings.rating_of_instruction}/6` : '—'}
                                                     </div>
                                                 </div>
                                                 <div className="summary-rating">
-                                                    <div className="summary-rating-label">Estimated Learning</div>
+                                                    <div className="summary-rating-label">{getShortLabel('rating_of_course')}</div>
+                                                    <div className={`summary-rating-score ${getRatingColorClass(ratings.rating_of_course)}`}>
+                                                        {ratings.rating_of_course > 0 ? `${ratings.rating_of_course}/6` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="summary-rating">
+                                                    <div className="summary-rating-label">{getShortLabel('estimated_learning')}</div>
                                                     <div className={`summary-rating-score ${getRatingColorClass(ratings.estimated_learning)}`}>
                                                         {ratings.estimated_learning > 0 ? `${ratings.estimated_learning}/6` : '—'}
                                                     </div>
                                                 </div>
                                                 <div className="summary-rating">
-                                                    <div className="summary-rating-label">Intellectual Challenge</div>
+                                                    <div className="summary-rating-label">{getShortLabel('intellectual_challenge')}</div>
                                                     <div className={`summary-rating-score ${getRatingColorClass(ratings.intellectual_challenge)}`}>
                                                         {ratings.intellectual_challenge > 0 ? `${ratings.intellectual_challenge}/6` : '—'}
                                                     </div>
                                                 </div>
                                                 <div className="summary-rating">
-                                                    <div className="summary-rating-label">Stimulating Instructor</div>
+                                                    <div className="summary-rating-label">{getShortLabel('stimulating_instructor')}</div>
                                                     <div className={`summary-rating-score ${getRatingColorClass(ratings.stimulating_instructor)}`}>
                                                         {ratings.stimulating_instructor > 0 ? `${ratings.stimulating_instructor}/6` : '—'}
                                                     </div>
                                                 </div>
                                                 <div className="summary-rating">
-                                                    <div className="summary-rating-label">Hours/Week</div>
+                                                    <div className="summary-rating-label">{getShortLabel('time_survey')}</div>
                                                     <div className={`summary-rating-score ${getRatingColorClass(ratings.time_survey)}`}>
                                                         {ratings.time_survey || '—'}
                                                     </div>
@@ -338,11 +343,11 @@ export function DetailPage() {
                                     <span className="response-count">{offering.survey_responses.length} questions</span>
                                 </div>
                                 <div className="reviews-list">
-                                    {offering.survey_responses.map((response) => (
+                                    {sortSurveyResponsesByOrder(offering.survey_responses).map((response) => (
                                         <div key={response.id} className="review-card">
                                             <div className="review-header">
                                                 <h4 className="question-title">
-                                                    {response.survey_question?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}
+                                                    {getFullQuestion(response.survey_question)}
                                                 </h4>
                                             </div>
                                             
