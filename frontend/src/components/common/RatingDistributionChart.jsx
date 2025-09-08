@@ -53,6 +53,21 @@ export function RatingDistributionChart({ distribution }) {
       return numeric
     }
     
+    // Handle class standing ordering (freshman → other)
+    const classStandingOrder = {
+      freshman: 1,
+      sophomore: 2,
+      junior: 3,
+      senior: 4,
+      graduate: 5,
+      professional: 6,
+      other: 7,
+    }
+    const normalized = String(label).toLowerCase().trim()
+    if (classStandingOrder[normalized] !== undefined) {
+      return classStandingOrder[normalized] + 100
+    }
+    
     // Handle hours per week ranges
     const hourRanges = {
       '3 or fewer': 1,

@@ -21,7 +21,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 4rem;
+  height: 8rem;
 }
 
 .logo {
@@ -29,7 +29,7 @@
 }
 
 .logo h1 {
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   font-weight: bold;
   color: #111827;
   margin: 0;
@@ -37,13 +37,15 @@
 
 .nav {
   display: flex;
-  gap: 2rem;
+  gap: 3rem;
 }
 
 .nav-link {
   color: #6b7280;
   text-decoration: none;
   font-weight: 500;
+  font-size: 1.1rem;
+  padding: 0.5rem 0;
 }
 
 .nav-link:hover {
@@ -1261,5 +1263,299 @@
   .professor-photo {
     width: 120px;
     height: 120px;
+  }
+}
+
+/* ================= About Page ================= */
+.about-page {
+  background-color: #f8fafc;
+}
+
+.about-hero {
+  padding: 4rem 0 2rem 0;
+  text-align: center;
+}
+
+.about-title {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.about-subtitle {
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+.about-mission {
+  padding: 2rem 0;
+}
+
+.mission-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+.mission-card h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.75rem;
+  color: #1f2937;
+}
+
+.mission-card p {
+  color: #374151;
+  line-height: 1.7;
+}
+
+.mission-note {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.about-story {
+  padding: 2rem 0;
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr;
+  gap: 2rem;
+}
+
+.story-text h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.story-text p {
+  color: #374151;
+  line-height: 1.7;
+}
+
+.story-highlights {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.highlight {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #f9fafb;
+}
+
+.highlight-icon {
+  font-size: 1.25rem;
+}
+
+.highlight-content h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.highlight-content p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.about-stats {
+  padding: 2rem 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.stats-footnote {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.about-testimonials {
+  padding: 2rem 0;
+}
+
+.section-header h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.testimonial-card {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.testimonial-quote {
+  color: #374151;
+  line-height: 1.7;
+  font-style: italic;
+}
+
+.testimonial-author {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.author-name {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.author-role {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.about-locations {
+  padding: 2rem 0;
+}
+
+.locations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.location-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.location-pin {
+  font-size: 1.25rem;
+}
+
+.location-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.location-detail {
+  margin: 0;
+  color: #6b7280;
+}
+
+.about-resources {
+  padding: 2rem 0 3rem 0;
+}
+
+.resources-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.resources-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.resources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.resources-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #f9fafb;
+}
+
+.resource-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.resource-desc {
+  color: #6b7280;
+}
+
+/* About Responsive */
+@media (max-width: 1024px) {
+  .story-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .locations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .about-title {
+    font-size: 2rem;
+  }
+  .stats-grid,
+  .testimonials-grid,
+  .locations-grid {
+    grid-template-columns: 1fr;
   }
 }

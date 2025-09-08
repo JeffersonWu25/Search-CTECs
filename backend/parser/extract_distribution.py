@@ -22,6 +22,9 @@ def get_distribution_for_one_question(text: str, file_identifier: str = "") -> d
 
     Returns:
         {distribution: {1: count, 2: count, ..., 6: count}}
+        
+    Raises:
+        ValueError: If OCR validation fails (total mismatch)
     """
     dist_pattern = re.compile(
         r"(?i)([1-6])(?:\s*[-–—]\s*[A-Za-z][A-Za-z\s–—-]*)?\s*\((\d+)\)" # catches 1-Very Low (9) and 1 (9)
@@ -41,12 +44,9 @@ def get_distribution_for_one_question(text: str, file_identifier: str = "") -> d
 
         if ocr_total != calculated_total:
             file_info = f" [{file_identifier}]" if file_identifier else ""
-            print(f"⚠️  OCR VALIDATION WARNING{file_info}: Total mismatch detected!")
-            print(f"   OCR reported total: {ocr_total}")
-            print(f"   Calculated total: {calculated_total}")
-            print(f"   Distribution: {distribution}")
-            print(f"   Missing values: {ocr_total - calculated_total} responses")
-            print()
+            error_msg = f"OCR validation failed{file_info}: Total mismatch detected! OCR reported total: {ocr_total}, Calculated total: {calculated_total}, Missing values: {ocr_total - calculated_total} responses"
+            print(f"⚠️  {error_msg}")
+            raise ValueError(error_msg)
 
     return distribution
 
@@ -77,11 +77,21 @@ def get_distributions_for_first_5_survey_questions(text: str, file_identifier: s
     }
 
     results = {}
+    validation_errors = []
+
     for question, pattern in survey_questions.items():
         match = re.search(pattern, text, flags=re.S)
         if match:
             block = match.group(0)
-            results[question] = get_distribution_for_one_question(block, file_identifier)
+            try:
+                results[question] = get_distribution_for_one_question(block, file_identifier)
+            except ValueError as e:
+                validation_errors.append(f"{question}: {str(e)}")
+
+    # If any validation errors occurred, raise an exception
+    if validation_errors:
+        error_summary = f"OCR validation failed for {len(validation_errors)} questions: " + "; ".join(validation_errors)
+        raise ValueError(error_summary)
 
     return results
 
@@ -130,7 +140,13 @@ def extract_distributions_from_pdf(pdf_path: str) -> dict:
             except Exception as e:
                 raise Exception(f"OCR failed on page {i + 1}: {e}")
 
-        return get_distributions_for_first_5_survey_questions(full_ocr_text, pdf_path)
+        print(f"OCR text: {full_ocr_text}")
 
+        results = get_distributions_for_first_5_survey_questions(full_ocr_text, pdf_path)
+        print(f"Results: {results}")
+        return results
+
+    except ValueError as e:
+        raise ValueError(f"OCR validation failed for {pdf_path}: {e}")
     except Exception as e:
         raise Exception(f"Failed to extract distributions from {pdf_path}: {e}")

@@ -39,17 +39,17 @@ export const QUESTION_MAPPING = {
     fullQuestion: '7. What is the name of your school?',
     shortLabel: 'School Name'
   },
-  'class_standing': {
+  'class_year': {
     order: 8,
     fullQuestion: '8. Your Class (e.g., Freshman, Sophomore, etc.)',
     shortLabel: 'Class Standing'
   },
-  'reason_for_taking': {
+  'reason_for_taking_course': {
     order: 9,
     fullQuestion: '9. What is your reason for taking the course? (mark all that apply)',
     shortLabel: 'Reason for Taking'
   },
-  'interest_before': {
+  'prior_interest': {
     order: 10,
     fullQuestion: '10. What was your interest in this subject before taking the course?',
     shortLabel: 'Interest Before Course'

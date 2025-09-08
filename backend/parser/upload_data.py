@@ -3,6 +3,7 @@ This file is used to upload the data from the CTEC PDF to the database.
 """
 
 import os
+import glob
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -434,6 +435,12 @@ def process_multiple_ctecs(pdf_paths: list) -> Dict[str, Any]:
     }
 
 if __name__ == "__main__":
-    # Example usage - process multiple files
-    pdf_files = [f"backend/data/test{i}.pdf" for i in range(1, 18)]
-    results = process_multiple_ctecs(pdf_files)
+    # Get all PDF files from the distros directory
+    distros_path = "backend/data/distros/*.pdf"
+    pdf_files = glob.glob(distros_path)
+
+    if not pdf_files:
+        print("❌ No PDF files found in backend/data/distros/")
+    else:
+        print(f"📁 Found {len(pdf_files)} PDF files in distros folder")
+        results = process_multiple_ctecs(pdf_files)
