@@ -12,7 +12,7 @@ import {
   sortSurveyResponsesByOrder 
 } from '../utils/questionMapping'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = ''
 
 export function DetailPage() {
     const { selectedId } = useParams()
@@ -75,7 +75,7 @@ export function DetailPage() {
 
             try{
                 // Use backend API endpoint
-                const response = await fetch(`${API_BASE_URL}/offerings/${selectedId}`)
+                const response = await fetch(`/api/offerings/${selectedId}`)
                 
                 if (!response.ok) {
                     if (response.status === 404) {
