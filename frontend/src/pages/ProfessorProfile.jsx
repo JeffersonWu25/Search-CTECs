@@ -7,8 +7,7 @@ import {
   calculateProfessorAverages
 } from '../utils/ratingCalculations'
 import { getShortLabel } from '../utils/questionMapping'
-
-const API_BASE_URL = 'http://localhost:8000'
+import { apiConfig } from '../config/api.js'
 
 export function ProfessorProfile() {
   const navigate = useNavigate()
@@ -26,7 +25,7 @@ export function ProfessorProfile() {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/instructors/${selectedId}/profile`)
+        const response = await fetch(apiConfig.endpoints.instructorProfile(selectedId))
         
         if (!response.ok) {
           if (response.status === 404) {

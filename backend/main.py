@@ -20,6 +20,7 @@ app = FastAPI(title="CTEC API")
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",  # Vite default port
+    "https://nuctecs.vercel.app"
 ]
 
 # Configure CORS for frontend access

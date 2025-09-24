@@ -11,8 +11,7 @@ import {
   getShortLabel, 
   sortSurveyResponsesByOrder 
 } from '../utils/questionMapping'
-
-const API_BASE_URL = ''
+import { apiConfig } from '../config/api.js'
 
 export function DetailPage() {
     const { selectedId } = useParams()
@@ -75,7 +74,7 @@ export function DetailPage() {
 
             try{
                 // Use backend API endpoint
-                const response = await fetch(`/api/offerings/${selectedId}`)
+                const response = await fetch(apiConfig.endpoints.offeringDetail(selectedId))
                 
                 if (!response.ok) {
                     if (response.status === 404) {
